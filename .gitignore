@@ -1,6 +1,32 @@
+# IDE
 /.idea/
+.vscode/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+dist/
+build/
+
+# Jupyter
 .ipynb_checkpoints/
 .virtual_documents/
+
+# Cache files
+*.pickle
+*.pkl
+
+# Logs
+*.log
+
+# Database
+*.db
+
+# Project specific
 /tryouts/
 /hvac/air_diffusion/.notes/
 /hvac/cooling_load_calc_old/.notes/
