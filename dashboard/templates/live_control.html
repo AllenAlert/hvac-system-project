@@ -1,0 +1,432 @@
+{% extends "base.html" %}
+{% block title %}Live Control — HVAC Dashboard{% endblock %}
+{% block head %}
+<link rel="stylesheet" href="{{ url_for('static', path='/css/ml-styles.css') }}">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.min.js"></script>
+{% endblock %}
+{% block content %}
+<header class="page-header">
+  <h2>Live Control</h2>
+  <p class="subtitle">Real-time RC simulation · Rule-based, PID, MPC</p>
+</header>
+
+<section class="live-metrics" id="live-metrics">
+  <div class="metric-card"><span class="metric-label">Indoor T</span><span class="metric-value" id="m-T_in">—</span><span class="metric-unit">°C</span></div>
+  <div class="metric-card"><span class="metric-label">Outdoor T</span><span class="metric-value" id="m-T_out">—</span><span class="metric-unit">°C</span></div>
+  <div class="metric-card"><span class="metric-label">Setpoint</span><span class="metric-value" id="m-setpoint">—</span><span class="metric-unit">°C</span></div>
+  <div class="metric-card"><span class="metric-label">Error</span><span class="metric-value" id="m-error">—</span><span class="metric-unit">°C</span></div>
+  <div class="metric-card"><span class="metric-label">Cooling</span><span class="metric-value" id="m-cooling">—</span><span class="metric-unit">W</span></div>
+  <div class="metric-card"><span class="metric-label">Occupancy</span><span class="metric-value" id="m-occupied">—</span></div>
+  <div class="metric-card"><span class="metric-label">Strategy</span><span class="metric-value" id="m-strategy">—</span></div>
+  <div class="metric-card"><span class="metric-label">Time</span><span class="metric-value" id="m-time">—</span></div>
+</section>
+<p class="live-error" id="live-error" style="display:none; color:#dc2626; margin:0.5rem 0;"></p>
+
+<div class="two-col live-section">
+  <section class="panel chart-panel">
+    <h3>Temperature</h3>
+    <div class="chart-container"><canvas id="chart-temp" aria-label="Indoor vs setpoint"></canvas></div>
+  </section>
+  <section class="panel chart-panel">
+    <h3>HVAC power (W)</h3>
+    <div class="chart-container"><canvas id="chart-power" aria-label="Cooling power"></canvas></div>
+  </section>
+</div>
+
+<section class="panel control-panel">
+  <h3>Control</h3>
+  <div class="control-grid">
+    <div class="control-group">
+      <label>Strategy</label>
+      <select id="ctrl-strategy">
+        <option value="rule">Rule-based (hysteresis)</option>
+        <option value="pid">PID</option>
+        <option value="mpc">MPC</option>
+        <option value="ml">ML-Optimized</option>
+      </select>
+      <p class="control-desc" id="strategy-desc">Hysteresis thermostat: on above setpoint+deadband/2, off below setpoint−deadband/2.</p>
+    </div>
+    <div class="control-group">
+      <label>Simulation</label>
+      <div class="btn-row">
+        <button type="button" class="btn btn-secondary" id="btn-pause">Pause</button>
+        <button type="button" class="btn btn-primary" id="btn-resume">Resume</button>
+      </div>
+    </div>
+    <div class="control-group">
+      <label>Occupancy</label>
+      <select id="ctrl-occupancy">
+        <option value="">Auto (8–18h)</option>
+        <option value="true">Occupied</option>
+        <option value="false">Unoccupied</option>
+      </select>
+    </div>
+    <div class="control-group">
+      <label>Setpoint override (°C)</label>
+      <input type="number" id="ctrl-setpoint-override" step="0.5" placeholder="Leave empty for auto">
+    </div>
+    <div class="control-group">
+      <label>Weather</label>
+      <select id="ctrl-weather">
+        <option value="synthetic">Synthetic</option>
+        <option value="api">API (Open-Meteo)</option>
+      </select>
+    </div>
+  </div>
+</section>
+
+<section class="panel ml-panel">
+  <h3>ML Predictions</h3>
+  <div class="ml-status" id="ml-status">
+    <p>Loading ML status...</p>
+  </div>
+  <div class="ml-controls">
+    <button type="button" class="btn btn-secondary" id="btn-train-models">Train Models</button>
+    <button type="button" class="btn btn-primary" id="btn-predict-energy">Predict Energy</button>
+    <button type="button" class="btn btn-primary" id="btn-optimize-setpoint">Optimize Setpoint</button>
+  </div>
+  <div class="ml-results" id="ml-results" style="margin-top: 1rem;"></div>
+</section>
+
+<section class="panel params-panel">
+  <h3>Tunable parameters</h3>
+  <div class="params-grid">
+    <div class="param-group">
+      <label>Setpoint occupied (°C)</label>
+      <input type="number" id="param-setpoint-occupied" value="22" step="0.5">
+    </div>
+    <div class="param-group">
+      <label>Setpoint unoccupied (°C)</label>
+      <input type="number" id="param-setpoint-unoccupied" value="18" step="0.5">
+    </div>
+    <div class="param-group">
+      <label>Deadband (°C) — rule-based</label>
+      <input type="number" id="param-deadband" value="1" step="0.1">
+    </div>
+    <div class="param-group">
+      <label>Max cooling (W)</label>
+      <input type="number" id="param-max-cooling" value="5000" step="100">
+    </div>
+    <div class="param-group">
+      <label>Kp — PID</label>
+      <input type="number" id="param-Kp" value="0.5" step="0.05">
+    </div>
+    <div class="param-group">
+      <label>Ki — PID</label>
+      <input type="number" id="param-Ki" value="0.05" step="0.01">
+    </div>
+    <div class="param-group">
+      <label>Kd — PID</label>
+      <input type="number" id="param-Kd" value="0.01" step="0.005">
+    </div>
+    <div class="param-group">
+      <label>MPC horizon (steps)</label>
+      <input type="number" id="param-mpc-horizon" value="6" min="2" max="30">
+    </div>
+    <div class="param-group">
+      <label>MPC weight comfort</label>
+      <input type="number" id="param-mpc-comfort" value="1" step="0.1">
+    </div>
+    <div class="param-group">
+      <label>MPC weight energy</label>
+      <input type="number" id="param-mpc-energy" value="0.1" step="0.05">
+    </div>
+    <div class="param-group">
+      <label>Sim timestep (s)</label>
+      <input type="number" id="param-dt-sec" value="60" min="5" max="300" step="5">
+    </div>
+  </div>
+  <button type="button" class="btn btn-primary" id="btn-apply-params">Apply parameters</button>
+</section>
+{% endblock %}
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+<script>
+(function() {
+  const POLL_MS = 2000;
+  const HISTORY_BUFFER = 240; // 4 hours at 60s step
+  let chartTemp = null, chartPower = null;
+
+  const strategyDesc = {
+    rule: 'Hysteresis thermostat: cooling on when T > setpoint+deadband/2, off when T < setpoint−deadband/2.',
+    pid: 'Proportional-Integral-Derivative: smooth continuous cooling adjustment from temperature error.',
+    mpc: 'Model Predictive Control: optimizes cooling over a horizon to minimize comfort error and energy.',
+    ml: 'ML-Optimized: uses machine learning to predict optimal setpoints and control strategies.'
+  };
+
+  function formatTime(sec) {
+    const h = Math.floor(sec / 3600), m = Math.floor((sec % 3600) / 60);
+    return h + 'h ' + m + 'm';
+  }
+
+  function updateMetrics(s) {
+    document.getElementById('m-T_in').textContent = s.T_in != null ? s.T_in.toFixed(2) : '—';
+    document.getElementById('m-T_out').textContent = s.T_out != null ? s.T_out.toFixed(2) : '—';
+    document.getElementById('m-setpoint').textContent = s.setpoint != null ? s.setpoint.toFixed(2) : '—';
+    document.getElementById('m-error').textContent = s.error != null ? s.error.toFixed(2) : '—';
+    document.getElementById('m-cooling').textContent = s.cooling != null ? s.cooling.toFixed(0) : '—';
+    document.getElementById('m-occupied').textContent = s.occupied ? 'Yes' : 'No';
+    document.getElementById('m-strategy').textContent = s.strategy || '—';
+    document.getElementById('m-time').textContent = s.sim_time_sec != null ? formatTime(s.sim_time_sec) : '—';
+  }
+
+  function fetchStatus() {
+    return fetch('/api/sim/status').then(function(r) {
+      if (!r.ok) throw new Error('API ' + r.status);
+      return r.json();
+    });
+  }
+
+  function fetchHistory() {
+    return fetch('/api/sim/history?limit=' + HISTORY_BUFFER).then(function(r) {
+      if (!r.ok) throw new Error('API ' + r.status);
+      return r.json();
+    });
+  }
+
+  function showError(msg) {
+    const el = document.getElementById('live-error');
+    if (el) { el.textContent = msg; el.style.display = msg ? 'block' : 'none'; }
+  }
+
+  function initCharts() {
+    if (typeof Chart === 'undefined') return;
+    const common = { responsive: true, maintainAspectRatio: true, animation: false };
+    try {
+      chartTemp = new Chart(document.getElementById('chart-temp'), {
+      type: 'line',
+      data: {
+        labels: [],
+        datasets: [
+          { label: 'T_in °C', data: [], borderColor: '#0ea5e9', fill: false, tension: 0.1 },
+          { label: 'Setpoint °C', data: [], borderColor: '#22c55e', fill: false, tension: 0.1 }
+        ]
+      },
+      options: { ...common, scales: { x: { display: true }, y: { title: { display: true, text: '°C' } } } }
+    });
+    chartPower = new Chart(document.getElementById('chart-power'), {
+      type: 'line',
+      data: {
+        labels: [],
+        datasets: [{ label: 'Cooling W', data: [], borderColor: '#f59e0b', fill: true, tension: 0.1 }]
+      },
+      options: { ...common, scales: { x: { display: true }, y: { title: { display: true, text: 'W' }, beginAtZero: true } } }
+    });
+    } catch (e) { /* charts unavailable */ }
+  }
+
+  function poll() {
+    fetchStatus()
+      .then(function(s) {
+        showError('');
+        updateMetrics(s);
+        return fetchHistory();
+      })
+      .then(function(history) {
+        if (Array.isArray(history) && history.length > 0 && chartTemp && chartPower) {
+          const labels = history.slice(-HISTORY_BUFFER).map(r => formatTime(r.sim_time_sec));
+          chartTemp.data.labels = labels;
+          chartTemp.data.datasets[0].data = history.slice(-HISTORY_BUFFER).map(r => r.T_in);
+          chartTemp.data.datasets[1].data = history.slice(-HISTORY_BUFFER).map(r => r.setpoint);
+          chartTemp.update('none');
+          chartPower.data.labels = labels;
+          chartPower.data.datasets[0].data = history.slice(-HISTORY_BUFFER).map(r => r.cooling);
+          chartPower.update('none');
+        }
+      })
+      .catch(function() {
+        showError('Cannot reach simulation API. Is the server running? Try refreshing.');
+      });
+  }
+
+  try { initCharts(); } catch (e) { /* run without charts */ }
+  poll();
+  setInterval(poll, POLL_MS);
+
+  document.getElementById('ctrl-strategy').addEventListener('change', function() {
+    const v = this.value;
+    document.getElementById('strategy-desc').textContent = strategyDesc[v] || '';
+    fetch('/api/sim/config', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ strategy: v })
+    }).catch(() => {});
+  });
+
+  document.getElementById('btn-pause').addEventListener('click', () => {
+    fetch('/api/sim/control', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ pause: true }) }).catch(() => {});
+  });
+  document.getElementById('btn-resume').addEventListener('click', () => {
+    fetch('/api/sim/control', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ resume: true }) }).catch(() => {});
+  });
+
+  document.getElementById('ctrl-occupancy').addEventListener('change', function() {
+    const v = this.value;
+    if (v === '') {
+      fetch('/api/sim/config', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ occupancy_override: null }) }).catch(() => {});
+    } else {
+      fetch('/api/sim/control', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ occupancy_override: v === 'true' }) }).catch(() => {});
+    }
+  });
+
+  document.getElementById('ctrl-setpoint-override').addEventListener('change', function() {
+    const v = this.value.trim();
+    const payload = v === '' ? { setpoint_override: null } : { setpoint_override: parseFloat(v) };
+    fetch('/api/sim/config', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }).catch(() => {});
+  });
+
+  document.getElementById('ctrl-weather').addEventListener('change', function() {
+    fetch('/api/sim/config', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ weather_source: this.value })
+    }).catch(() => {});
+  });
+
+  document.getElementById('btn-apply-params').addEventListener('click', function() {
+    const body = {
+      setpoint_occupied: parseFloat(document.getElementById('param-setpoint-occupied').value),
+      setpoint_unoccupied: parseFloat(document.getElementById('param-setpoint-unoccupied').value),
+      deadband: parseFloat(document.getElementById('param-deadband').value),
+      max_cooling: parseFloat(document.getElementById('param-max-cooling').value),
+      Kp: parseFloat(document.getElementById('param-Kp').value),
+      Ki: parseFloat(document.getElementById('param-Ki').value),
+      Kd: parseFloat(document.getElementById('param-Kd').value),
+      mpc_horizon_steps: parseInt(document.getElementById('param-mpc-horizon').value, 10),
+      mpc_weight_comfort: parseFloat(document.getElementById('param-mpc-comfort').value),
+      mpc_weight_energy: parseFloat(document.getElementById('param-mpc-energy').value),
+      dt_sec: parseInt(document.getElementById('param-dt-sec').value, 10)
+    };
+    fetch('/api/sim/config', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }).then(() => poll()).catch(() => {});
+  });
+
+  fetch('/api/sim/config').then(r => r.json()).then(c => {
+    document.getElementById('param-setpoint-occupied').value = c.setpoint_occupied;
+    document.getElementById('param-setpoint-unoccupied').value = c.setpoint_unoccupied;
+    document.getElementById('param-deadband').value = c.deadband;
+    document.getElementById('param-max-cooling').value = c.max_cooling;
+    document.getElementById('param-Kp').value = c.Kp;
+    document.getElementById('param-Ki').value = c.Ki;
+    document.getElementById('param-Kd').value = c.Kd;
+    document.getElementById('param-mpc-horizon').value = c.mpc_horizon_steps;
+    document.getElementById('param-mpc-comfort').value = c.mpc_weight_comfort;
+    document.getElementById('param-mpc-energy').value = c.mpc_weight_energy;
+    if (document.getElementById('param-dt-sec')) document.getElementById('param-dt-sec').value = c.dt_sec || 60;
+    document.getElementById('ctrl-strategy').value = c.strategy || 'rule';
+    document.getElementById('strategy-desc').textContent = strategyDesc[c.strategy] || strategyDesc.rule;
+    document.getElementById('ctrl-weather').value = c.weather_source || 'synthetic';
+  }).catch(() => {});
+
+  // ML functionality
+  function updateMLStatus() {
+    fetch('/api/ml/status').then(r => r.json()).then(status => {
+      const statusEl = document.getElementById('ml-status');
+      if (status.ml_available) {
+        statusEl.innerHTML = `
+          <p style="color: green;">✓ ML Available</p>
+          <p>Energy Model: ${status.energy_model_loaded ? '✓ Loaded' : '✗ Not loaded'}</p>
+          <p>Load Model: ${status.load_model_loaded ? '✓ Loaded' : '✗ Not loaded'}</p>
+        `;
+      } else {
+        statusEl.innerHTML = '<p style="color: orange;">⚠ ML dependencies not installed</p>';
+      }
+    }).catch(() => {
+      document.getElementById('ml-status').innerHTML = '<p style="color: red;">✗ ML service unavailable</p>';
+    });
+  }
+
+  function showMLResult(result, type) {
+    const resultsEl = document.getElementById('ml-results');
+    if (result.error) {
+      resultsEl.innerHTML = `<p style="color: red;">Error: ${result.error}</p>`;
+    } else if (type === 'energy') {
+      resultsEl.innerHTML = `
+        <h4>Energy Prediction</h4>
+        <p><strong>${result.predicted_energy.toFixed(2)} ${result.unit}</strong></p>
+        <p>Model: ${result.model_type}</p>
+      `;
+    } else if (type === 'loads') {
+      resultsEl.innerHTML = `
+        <h4>Load Predictions</h4>
+        <p>Heating: <strong>${result.heating_load.toFixed(2)} ${result.unit}</strong></p>
+        <p>Cooling: <strong>${result.cooling_load.toFixed(2)} ${result.unit}</strong></p>
+        <p>Total: <strong>${result.total_load.toFixed(2)} ${result.unit}</strong></p>
+      `;
+    } else if (type === 'optimize') {
+      resultsEl.innerHTML = `
+        <h4>Setpoint Optimization</h4>
+        <p>Optimal Setpoint: <strong>${result.optimal_setpoint.toFixed(1)}°C</strong></p>
+        <p>Predicted Energy: <strong>${result.predicted_energy.toFixed(2)} ${result.unit}</strong></p>
+        <p>Energy Savings: <strong>${result.energy_savings.toFixed(2)} ${result.unit}</strong></p>
+      `;
+    } else if (type === 'train') {
+      resultsEl.innerHTML = `
+        <h4>Model Training Complete</h4>
+        <p>Samples: ${result.samples_trained}</p>
+        <p>Energy Model R²: ${result.energy_model.r2.toFixed(3)}</p>
+        <p>Load Model R²: ${result.load_model.heating_r2.toFixed(3)} (heating)</p>
+      `;
+    }
+  }
+
+  document.getElementById('btn-train-models').addEventListener('click', () => {
+    document.getElementById('ml-results').innerHTML = '<p>Training models... (this may take a moment)</p>';
+    fetch('/api/ml/train', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ n_samples: 1000 })
+    }).then(r => r.json()).then(result => {
+      showMLResult(result, 'train');
+      updateMLStatus();
+    }).catch(() => {
+      document.getElementById('ml-results').innerHTML = '<p style="color: red;">Training failed</p>';
+    });
+  });
+
+  document.getElementById('btn-predict-energy').addEventListener('click', () => {
+    const params = {
+      floor_area: 1000,
+      height: 3.0,
+      window_ratio: 0.3,
+      insulation_r: 3.5,
+      occupancy: 20,
+      outdoor_temp: parseFloat(document.getElementById('m-T_out').textContent) || 15,
+      solar_irradiance: 500,
+      wind_speed: 5
+    };
+    
+    fetch('/api/ml/predict/energy', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(params)
+    }).then(r => r.json()).then(result => {
+      showMLResult(result, 'energy');
+    }).catch(() => {
+      document.getElementById('ml-results').innerHTML = '<p style="color: red;">Prediction failed</p>';
+    });
+  });
+
+  document.getElementById('btn-optimize-setpoint').addEventListener('click', () => {
+    const currentConditions = {
+      floor_area: 1000,
+      outdoor_temp: parseFloat(document.getElementById('m-T_out').textContent) || 15
+    };
+    
+    fetch('/api/ml/optimize/setpoint', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        current_conditions: currentConditions,
+        target_energy: 3000
+      })
+    }).then(r => r.json()).then(result => {
+      showMLResult(result, 'optimize');
+    }).catch(() => {
+      document.getElementById('ml-results').innerHTML = '<p style="color: red;">Optimization failed</p>';
+    });
+  });
+
+  updateMLStatus();
+})();
+</script>
+{% endblock %}

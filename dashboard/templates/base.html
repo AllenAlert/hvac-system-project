@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}HVAC Dashboard{% endblock %}</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+  <aside class="sidebar">
+    <div class="sidebar-header">
+      <span class="logo-icon">◉</span>
+      <h1 class="logo-text">HVAC</h1>
+      <span class="logo-badge">Dashboard</span>
+    </div>
+    <nav class="sidebar-nav">
+      <a href="/" class="nav-item {% if request.url.path == '/' %}active{% endif %}">
+        <span class="nav-icon">⌂</span>
+        Overview
+      </a>
+      <a href="/live" class="nav-item {% if request.url.path == '/live' %}active{% endif %}">
+        <span class="nav-icon">▶</span>
+        Live Control
+      </a>
+      <a href="/heating-load" class="nav-item {% if request.url.path == '/heating-load' %}active{% endif %}">
+        <span class="nav-icon">🔥</span>
+        Heating Load
+      </a>
+      <a href="/solar" class="nav-item {% if request.url.path == '/solar' %}active{% endif %}">
+        <span class="nav-icon">☀</span>
+        Solar
+      </a>
+      <a href="/radiator" class="nav-item {% if request.url.path == '/radiator' %}active{% endif %}">
+        <span class="nav-icon">⊞</span>
+        Radiator
+      </a>
+    </nav>
+    <div class="sidebar-footer">
+      <small>python-hvac</small>
+    </div>
+  </aside>
+  <main class="main">
+    {% block content %}{% endblock %}
+  </main>
+  <script src="/static/js/app.js"></script>
+  {% block scripts %}{% endblock %}
+</body>
+</html>

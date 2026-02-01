@@ -1,0 +1,115 @@
+{% extends "base.html" %}
+{% block title %}Radiator — HVAC Dashboard{% endblock %}
+{% block content %}
+<header class="page-header">
+  <h2>Panel Radiator</h2>
+  <p class="subtitle">Design from nominal specs and operating point</p>
+</header>
+<div class="two-col">
+  <section class="panel form-panel">
+    <h3>Nominal design</h3>
+    <form id="radiator-design-form" class="form">
+      <label>Nominal heat <var>Q̇<sub>e,nom</sub></var> (W)</label>
+      <input type="number" name="Qe_dot_nom_W" value="1000" step="100">
+      <label>Supply temp <var>T<sub>w,sup,nom</sub></var> (°C)</label>
+      <input type="number" name="Tw_sup_nom_degC" value="70" step="1">
+      <label>Return temp <var>T<sub>w,ret,nom</sub></var> (°C)</label>
+      <input type="number" name="Tw_ret_nom_degC" value="55" step="1">
+      <label>Indoor temp <var>T<sub>i,nom</sub></var> (°C)</label>
+      <input type="number" name="Ti_nom_degC" value="20" step="1">
+      <label>Exponent <var>n</var></label>
+      <input type="number" name="n_exp" value="1.3" step="0.05">
+      <button type="submit" class="btn btn-primary">Design</button>
+    </form>
+    <h3 class="mt">Operating point</h3>
+    <p class="hint">Set indoor temp and exactly one of: heat output, supply temp, or flow.</p>
+    <form id="radiator-operating-form" class="form">
+      <input type="hidden" name="Qe_dot_nom_W" id="op_Qe_dot_nom_W" value="1000">
+      <input type="hidden" name="Tw_sup_nom_degC" id="op_Tw_sup_nom_degC" value="70">
+      <input type="hidden" name="Tw_ret_nom_degC" id="op_Tw_ret_nom_degC" value="55">
+      <input type="hidden" name="Ti_nom_degC" id="op_Ti_nom_degC" value="20">
+      <input type="hidden" name="n_exp" id="op_n_exp" value="1.3">
+      <label>Indoor temp <var>T<sub>i</sub></var> (°C)</label>
+      <input type="number" name="Ti_degC" value="20" step="0.5">
+      <label>Heat output <var>Q̇<sub>e</sub></var> (W) — leave blank to solve</label>
+      <input type="number" name="Qe_dot_W" value="" step="50" placeholder="e.g. 800">
+      <label>Supply temp <var>T<sub>w,sup</sub></var> (°C) — leave blank to solve</label>
+      <input type="number" name="Tw_sup_degC" value="" step="1" placeholder="e.g. 65">
+      <label>Flow <var>V̇</var> (L/s) — leave blank to solve</label>
+      <input type="number" name="Vw_dot_L_s" value="" step="0.01" placeholder="e.g. 0.05">
+      <button type="submit" class="btn btn-secondary">Solve</button>
+    </form>
+  </section>
+  <section class="panel results-panel">
+    <h3>Design results</h3>
+    <div id="radiator-design-results" class="results-placeholder">Run Design to see nominal values.</div>
+    <h3 class="mt">Operating result</h3>
+    <div id="radiator-operating-results" class="results-placeholder">Set one of Q̇, T_sup, or V̇ and Solve.</div>
+  </section>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+(function() {
+  const designForm = document.getElementById('radiator-design-form');
+  const operatingForm = document.getElementById('radiator-operating-form');
+  const designResults = document.getElementById('radiator-design-results');
+  const operatingResults = document.getElementById('radiator-operating-results');
+
+  function formatQ(q) {
+    if (!q || q.value == null) return '—';
+    return q.value.toFixed(4) + ' ' + (q.unit || '');
+  }
+
+  designForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const fd = new FormData(designForm);
+    const body = {};
+    fd.forEach((v, k) => { body[k] = parseFloat(v); });
+    ['op_Qe_dot_nom_W','op_Tw_sup_nom_degC','op_Tw_ret_nom_degC','op_Ti_nom_degC','op_n_exp'].forEach((id, i) => {
+      const key = id.replace('op_','');
+      document.getElementById(id).value = body[key] ?? document.getElementById(id).value;
+    });
+    try {
+      const res = await fetch('/api/radiator/design', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+      if (!res.ok) throw new Error((await res.json()).detail || res.statusText);
+      const d = await res.json();
+      designResults.innerHTML = `
+        <dl class="results-dl">
+          <dt>Q̇<sub>e,nom</sub></dt><dd>${formatQ(d.Qe_dot_nom)}</dd>
+          <dt>T<sub>w,sup,nom</sub></dt><dd>${formatQ(d.Tw_sup_nom)}</dd>
+          <dt>T<sub>w,ret,nom</sub></dt><dd>${formatQ(d.Tw_ret_nom)}</dd>
+          <dt>V̇<sub>nom</sub></dt><dd>${formatQ(d.Vw_dot_nom)}</dd>
+        </dl>
+      `;
+    } catch (err) {
+      designResults.innerHTML = '<p class="error">' + err.message + '</p>';
+    }
+  });
+
+  operatingForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const fd = new FormData(operatingForm);
+    const body = {
+      Qe_dot_nom_W: parseFloat(document.getElementById('op_Qe_dot_nom_W').value) || 1000,
+      Tw_sup_nom_degC: parseFloat(document.getElementById('op_Tw_sup_nom_degC').value) || 70,
+      Tw_ret_nom_degC: parseFloat(document.getElementById('op_Tw_ret_nom_degC').value) || 55,
+      Ti_nom_degC: parseFloat(document.getElementById('op_Ti_nom_degC').value) || 20,
+      n_exp: parseFloat(document.getElementById('op_n_exp').value) || 1.3,
+      Ti_degC: parseFloat(fd.get('Ti_degC')) || 20,
+      Qe_dot_W: fd.get('Qe_dot_W') ? parseFloat(fd.get('Qe_dot_W')) : null,
+      Tw_sup_degC: fd.get('Tw_sup_degC') ? parseFloat(fd.get('Tw_sup_degC')) : null,
+      Vw_dot_L_s: fd.get('Vw_dot_L_s') ? parseFloat(fd.get('Vw_dot_L_s')) : null,
+    };
+    try {
+      const res = await fetch('/api/radiator/operating', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+      if (!res.ok) throw new Error((await res.json()).detail || res.statusText);
+      const d = await res.json();
+      operatingResults.innerHTML = `<p><strong>${d.quantity}</strong>: ${formatQ(d.solved)}</p>`;
+    } catch (err) {
+      operatingResults.innerHTML = '<p class="error">' + err.message + '</p>';
+    }
+  });
+})();
+</script>
+{% endblock %}

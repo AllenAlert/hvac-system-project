@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+{% block title %}Overview — HVAC Dashboard{% endblock %}
+{% block content %}
+<header class="page-header">
+  <h2>Overview</h2>
+  <p class="subtitle">HVAC engineering calculations at a glance</p>
+</header>
+<section class="cards" id="overview-cards">
+  <article class="card card-link" data-href="/live">
+    <div class="card-icon">▶</div>
+    <h3>Live Control</h3>
+    <p>Real-time RC thermal simulation with rule-based, PID, and MPC control. Live metrics, charts, and tunable parameters.</p>
+  </article>
+  <article class="card card-link" data-href="/heating-load">
+    <div class="card-icon">🔥</div>
+    <h3>Heating Load</h3>
+    <p>Building heating load, balance temperature, and load curve from transmission, ventilation, and system efficiency.</p>
+  </article>
+  <article class="card card-link" data-href="/solar">
+    <div class="card-icon">☀</div>
+    <h3>Solar</h3>
+    <p>Solar position, sunrise/sunset, and surface angles for any location and date.</p>
+  </article>
+  <article class="card card-link" data-href="/radiator">
+    <div class="card-icon">⊞</div>
+    <h3>Radiator</h3>
+    <p>Panel radiator design from nominal specs and operating point (flow, supply temp, or heat output).</p>
+  </article>
+</section>
+<section class="info-section">
+  <h3>About</h3>
+  <p>This dashboard uses the <strong>python-hvac</strong> library for cooling/heating load calculations, energy estimation, solar radiation, and radiant emitters. Start by choosing a module above.</p>
+</section>
+{% endblock %}

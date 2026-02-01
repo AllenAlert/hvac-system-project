@@ -1,0 +1,114 @@
+{% extends "base.html" %}
+{% block title %}Heating Load — HVAC Dashboard{% endblock %}
+{% block content %}
+<header class="page-header">
+  <h2>Heating Load</h2>
+  <p class="subtitle">Building heating load and balance temperature</p>
+</header>
+<div class="two-col">
+  <section class="panel form-panel">
+    <h3>Inputs</h3>
+    <form id="heating-load-form" class="form">
+      <label>Indoor temp <var>T<sub>int</sub></var> (°C)</label>
+      <input type="number" name="T_int_degC" value="20" step="0.5">
+      <label>Min outdoor temp <var>T<sub>ext,min</sub></var> (°C)</label>
+      <input type="number" name="T_ext_min_degC" value="-8" step="0.5">
+      <label>Transmission coeff. <var>H<sub>trm</sub></var> (W/K)</label>
+      <input type="number" name="H_trm_W_per_K" value="0.143" step="0.01" title="e.g. 4/28 kW/K ≈ 0.143">
+      <label>Ventilation <var>V̇</var> (m³/hr)</label>
+      <input type="number" name="V_dot_ven_m3_hr" value="100" step="10">
+      <label>Internal gains <var>Q̇<sub>ihg</sub></var> (W)</label>
+      <input type="number" name="Q_dot_ihg_W" value="500" step="50">
+      <label>System efficiency <var>η</var> (%)</label>
+      <input type="number" name="eta_sys_pct" value="80" step="5" min="1" max="100">
+      <label>Current outdoor temp <var>T<sub>ext</sub></var> (°C)</label>
+      <input type="number" name="T_ext_current_degC" value="5" step="0.5">
+      <label>Duration (hours)</label>
+      <input type="number" name="num_hours" value="10" step="1" min="0">
+      <button type="submit" class="btn btn-primary">Calculate</button>
+    </form>
+  </section>
+  <section class="panel results-panel">
+    <h3>Results</h3>
+    <div id="heating-load-results" class="results-placeholder">Submit the form to see results.</div>
+    <div class="chart-container">
+      <canvas id="heating-load-chart" aria-label="Heating load vs outdoor temperature"></canvas>
+    </div>
+  </section>
+</div>
+{% endblock %}
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+<script>
+(function() {
+  const form = document.getElementById('heating-load-form');
+  const resultsEl = document.getElementById('heating-load-results');
+  const chartEl = document.getElementById('heating-load-chart');
+
+  let chart = null;
+
+  function formatQ(q) {
+    if (!q || q.value == null) return '—';
+    return q.value.toFixed(3) + ' ' + (q.unit || '');
+  }
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const fd = new FormData(form);
+    const body = {};
+    fd.forEach((v, k) => { body[k] = k.includes('pct') ? parseFloat(v) : parseFloat(v); });
+    if (body.T_ext_current_degC == null) body.T_ext_current_degC = null;
+    if (body.num_hours == null) body.num_hours = null;
+
+    try {
+      const res = await fetch('/api/heating-load', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      if (!res.ok) throw new Error((await res.json()).detail || res.statusText);
+      const data = await res.json();
+      resultsEl.innerHTML = `
+        <dl class="results-dl">
+          <dt>H_ven</dt><dd>${formatQ(data.H_ven)}</dd>
+          <dt>H_tot</dt><dd>${formatQ(data.H_tot)}</dd>
+          <dt>T_bal</dt><dd>${formatQ(data.T_bal)}</dd>
+          <dt>Q̇_out</dt><dd>${formatQ(data.Q_dot_out)}</dd>
+          <dt>Q̇_trm</dt><dd>${formatQ(data.Q_dot_trm)}</dd>
+          <dt>Q̇_ven</dt><dd>${formatQ(data.Q_dot_ven)}</dd>
+          <dt>Q̇_in</dt><dd>${formatQ(data.Q_dot_in)}</dd>
+          <dt>Q_in</dt><dd>${formatQ(data.Q_in)}</dd>
+        </dl>
+      `;
+
+      const charRes = await fetch('/api/heating-load/characteristic', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      if (charRes.ok) {
+        const charData = await charRes.json();
+        if (chart) chart.destroy();
+        chart = new Chart(chartEl, {
+          type: 'line',
+          data: {
+            labels: charData.T_ext_degC.map(t => t.toFixed(1)),
+            datasets: [{ label: 'Q̇_in (kW)', data: charData.Q_dot_in_kW, borderColor: '#0ea5e9', fill: false, tension: 0.1 }],
+          },
+          options: {
+            responsive: true,
+            plugins: { legend: { display: false } },
+            scales: {
+              x: { title: { display: true, text: 'Outdoor temp (°C)' } },
+              y: { title: { display: true, text: 'Q̇_in (kW)' }, beginAtZero: true },
+            },
+          },
+        });
+      }
+    } catch (err) {
+      resultsEl.innerHTML = '<p class="error">' + err.message + '</p>';
+    }
+  });
+})();
+</script>
+{% endblock %}

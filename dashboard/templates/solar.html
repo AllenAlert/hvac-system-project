@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+{% block title %}Solar — HVAC Dashboard{% endblock %}
+{% block content %}
+<header class="page-header">
+  <h2>Solar</h2>
+  <p class="subtitle">Solar position and surface angles</p>
+</header>
+<div class="two-col">
+  <section class="panel form-panel">
+    <h3>Location &amp; time</h3>
+    <form id="solar-form" class="form">
+      <label>Latitude (°)</label>
+      <input type="number" name="latitude_deg" value="51" step="0.1" min="-90" max="90">
+      <label>Date (year, month, day)</label>
+      <div class="row">
+        <input type="number" name="year" value="2024" min="2000" max="2100">
+        <input type="number" name="month" value="6" min="1" max="12">
+        <input type="number" name="day" value="21" min="1" max="31">
+      </div>
+      <label>Solar time (hour, minute)</label>
+      <div class="row">
+        <input type="number" name="hour" value="12" min="0" max="23">
+        <input type="number" name="minute" value="0" min="0" max="59">
+      </div>
+      <label>Surface azimuth (°), S=0, E=-90, W=+90</label>
+      <input type="number" name="surface_azimuth_deg" value="0" step="5">
+      <label>Surface slope (°)</label>
+      <input type="number" name="surface_slope_deg" value="30" step="5" min="0" max="90">
+      <button type="submit" class="btn btn-primary">Calculate</button>
+    </form>
+  </section>
+  <section class="panel results-panel">
+    <h3>Results</h3>
+    <div id="solar-results" class="results-placeholder">Submit the form to see results.</div>
+  </section>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+(function() {
+  const form = document.getElementById('solar-form');
+  const resultsEl = document.getElementById('solar-results');
+
+  function formatQ(q) {
+    if (!q || q.value == null) return '—';
+    return q.value.toFixed(2) + ' ' + (q.unit || '°');
+  }
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const fd = new FormData(form);
+    const body = {};
+    fd.forEach((v, k) => { body[k] = k === 'latitude_deg' || k.startsWith('surface') ? parseFloat(v) : parseInt(v, 10); });
+
+    try {
+      const res = await fetch('/api/solar', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      if (!res.ok) throw new Error((await res.json()).detail || res.statusText);
+      const d = await res.json();
+      resultsEl.innerHTML = `
+        <dl class="results-dl">
+          <dt>Sunrise (location)</dt><dd>${d.sunrise ?? '—'}</dd>
+          <dt>Sunset (location)</dt><dd>${d.sunset ?? '—'}</dd>
+          <dt>Solar altitude</dt><dd>${formatQ(d.solar_altitude_deg)}</dd>
+          <dt>Zenith angle</dt><dd>${formatQ(d.zenith_deg)}</dd>
+          <dt>Solar azimuth</dt><dd>${formatQ(d.solar_azimuth_deg)}</dd>
+          <dt>Surface sunrise</dt><dd>${d.surface_sunrise ?? '—'}</dd>
+          <dt>Surface sunset</dt><dd>${d.surface_sunset ?? '—'}</dd>
+          <dt>Profile angle</dt><dd>${formatQ(d.profile_angle_deg)}</dd>
+        </dl>
+      `;
+    } catch (err) {
+      resultsEl.innerHTML = '<p class="error">' + err.message + '</p>';
+    }
+  });
+})();
+</script>
+{% endblock %}

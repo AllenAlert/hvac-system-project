@@ -1,0 +1,21 @@
+# Core HVAC library (align with pyproject.toml)
+pint>=0.20.1
+coolprop>=6.4.3.post1
+scipy>=1.10.1
+pandas>=1.5.3
+sympy>=1.11.1
+astral>=3.2
+iapws>=1.5.3
+control>=0.10.1
+matplotlib>=3.10.0
+dill>=0.3.6
+
+# Web / ML (per your stack)
+flask>=3.0.0
+xgboost>=2.0.0
+scikit-learn>=1.3.0
+joblib>=1.3.0
+
+# Optional / examples (odfpy, lmfit, openpyxl, pyarrow, etc. in pyproject.toml)
+# For dashboard: use requirements-dashboard.txt
+jupyter>=1.0.0

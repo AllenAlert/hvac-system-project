@@ -1,0 +1,21 @@
+# Install hvac + dashboard deps with pip (no conda/poetry).
+# From project root:
+#   python -m pip install --user -e .
+#   python -m pip install --user -r requirements-dashboard.txt
+# If you get "Access is denied", use --user (as above).
+# Then: python -m uvicorn dashboard.main:app --host 127.0.0.1 --port 8000
+
+# Core hvac (match pyproject.toml)
+pint>=0.20.1
+coolprop>=6.4.3.post1
+scipy>=1.10.1
+pandas>=1.5.3
+sympy>=1.11.1
+astral>=3.2
+iapws>=1.5.3
+
+# Dashboard
+fastapi>=0.115.0
+uvicorn[standard]>=0.32.0
+jinja2>=3.1.0
+python-multipart>=0.0.9
