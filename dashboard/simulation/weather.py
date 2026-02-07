@@ -3,7 +3,6 @@ Outdoor temperature module.
 
 Provides synthetic weather (sine wave) or real weather from Open-Meteo API.
 
-@author: Bola
 """
 import math
 import time

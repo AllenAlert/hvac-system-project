@@ -1,10 +1,4 @@
-"""
-Service layer - wraps hvac library and handles unit conversions.
 
-Converts Pint Quantity objects to JSON-serializable format for the API.
-
-@author: Bola
-"""
 from datetime import date, time
 import sys
 from pathlib import Path

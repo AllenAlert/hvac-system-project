@@ -1,19 +1,13 @@
-"""
-ML Service - energy and load prediction
-
-Added ML predictions to make the dashboard more useful.
-The models are trained on simulated data but work pretty well
-for quick estimates.
-
-@author: Bola
-"""
-
 import os
 import json
+import warnings
 import pandas as pd
 import numpy as np
 from typing import Dict, List, Optional, Any
 from pathlib import Path
+
+# Suppress sklearn feature name warnings (we use numpy arrays, not DataFrames with names)
+warnings.filterwarnings('ignore', message='X does not have valid feature names')
 
 # the hvac.ml module is optional - don't want to force sklearn on everyone
 try:
@@ -32,11 +26,29 @@ class SimpleEnergyPredictor:
     predictors have a different interface and I didn't want to refactor everything.
     """
     
-    def __init__(self, model):
+    def __init__(self, model, scaler=None, feature_names=None, model_type="random_forest"):
         self.model = model
-        self.model_type = "random_forest"  # or xgboost, doesn't really matter here
-        # IMPORTANT: order must match training data!!
-        self.feature_names = ['outdoor_temp', 'indoor_temp', 'setpoint', 'occupancy', 'hour']
+        self.scaler = scaler
+        self.model_type = model_type
+        # Use provided feature names or default to the standard 8 features
+        self.feature_names = feature_names or [
+            'floor_area', 'height', 'window_ratio', 'insulation_r',
+            'occupancy', 'outdoor_temp', 'solar_irradiance', 'wind_speed'
+        ]
+        # Default values for missing features
+        self._defaults = {
+            'floor_area': 1000.0,
+            'height': 3.0,
+            'window_ratio': 0.3,
+            'insulation_r': 3.5,
+            'occupancy': 20.0,
+            'outdoor_temp': 20.0,
+            'solar_irradiance': 500.0,
+            'wind_speed': 5.0,
+            'indoor_temp': 22.0,
+            'setpoint': 22.0,
+            'hour': 12.0,
+        }
     
     def predict(self, df):
         """Predict energy consumption."""
@@ -45,29 +57,56 @@ class SimpleEnergyPredictor:
         # Handle both dict and DataFrame input
         if isinstance(df, dict):
             df = pd.DataFrame([df])
-        # Extract features in correct order as numpy array (no feature names)
-        X = np.array([[
-            float(df['outdoor_temp'].iloc[0]) if 'outdoor_temp' in df.columns else float(df.get('outdoor_temperature', [20]).iloc[0]) if 'outdoor_temperature' in df.columns else 20.0,
-            float(df['indoor_temp'].iloc[0]) if 'indoor_temp' in df.columns else float(df.get('indoor_temperature', [22]).iloc[0]) if 'indoor_temperature' in df.columns else 22.0,
-            float(df['setpoint'].iloc[0]) if 'setpoint' in df.columns else 22.0,
-            float(df['occupancy'].iloc[0]) if 'occupancy' in df.columns else 1.0,
-            float(df['hour'].iloc[0]) if 'hour' in df.columns else float(df.get('hour_of_day', [12]).iloc[0]) if 'hour_of_day' in df.columns else 12.0
-        ]])
+        
+        # Build feature array in correct order
+        X = []
+        for feat in self.feature_names:
+            if feat in df.columns:
+                X.append(float(df[feat].iloc[0]))
+            else:
+                X.append(self._defaults.get(feat, 0.0))
+        
+        X = np.array([X])
+        
+        # Apply scaler if available
+        if self.scaler is not None:
+            X = self.scaler.transform(X)
+        
         return self.model.predict(X)
     
     def get_feature_importance(self):
         """Get feature importance from the model."""
         if hasattr(self.model, 'feature_importances_'):
             return dict(zip(self.feature_names, self.model.feature_importances_))
-        return {name: 0.2 for name in self.feature_names}
+        elif hasattr(self.model, 'coef_'):
+            return dict(zip(self.feature_names, np.abs(self.model.coef_)))
+        return {name: 1.0 / len(self.feature_names) for name in self.feature_names}
 
 
 class SimpleLoadPredictor:
     """Simple wrapper for sklearn load prediction model."""
     
-    def __init__(self, model):
+    def __init__(self, model, scaler=None, feature_names=None, model_type="random_forest"):
         self.model = model
-        self.feature_names = ['outdoor_temp', 'floor_area', 'insulation_factor', 'window_ratio']
+        self.scaler = scaler
+        self.model_type = model_type
+        # Use provided feature names or default to the standard 8 features
+        self.feature_names = feature_names or [
+            'floor_area', 'height', 'window_ratio', 'insulation_r',
+            'occupancy', 'outdoor_temp', 'solar_irradiance', 'wind_speed'
+        ]
+        # Default values for missing features
+        self._defaults = {
+            'floor_area': 1000.0,
+            'height': 3.0,
+            'window_ratio': 0.3,
+            'insulation_r': 3.5,
+            'insulation_factor': 3.5,  # alias
+            'occupancy': 20.0,
+            'outdoor_temp': 20.0,
+            'solar_irradiance': 500.0,
+            'wind_speed': 5.0,
+        }
     
     def predict(self, df):
         """Predict heating and cooling loads."""
@@ -77,22 +116,34 @@ class SimpleLoadPredictor:
         if isinstance(df, dict):
             df = pd.DataFrame([df])
         
-        outdoor_temp = float(df['outdoor_temp'].iloc[0]) if 'outdoor_temp' in df.columns else 20.0
-        floor_area = float(df['floor_area'].iloc[0]) if 'floor_area' in df.columns else float(df.get('building_area', [100]).iloc[0]) if 'building_area' in df.columns else 100.0
-        insulation = float(df['insulation_factor'].iloc[0]) if 'insulation_factor' in df.columns else 1.0
-        window_ratio = float(df['window_ratio'].iloc[0]) if 'window_ratio' in df.columns else 0.2
+        # Build feature array in correct order
+        X = []
+        for feat in self.feature_names:
+            if feat in df.columns:
+                X.append(float(df[feat].iloc[0]))
+            elif feat == 'insulation_r' and 'insulation_factor' in df.columns:
+                X.append(float(df['insulation_factor'].iloc[0]))
+            else:
+                X.append(self._defaults.get(feat, 0.0))
         
-        X = np.array([[outdoor_temp, floor_area, insulation, window_ratio]])
+        X = np.array([X])
+        
+        # Apply scaler if available
+        if self.scaler is not None:
+            X = self.scaler.transform(X)
+        
         total_load = self.model.predict(X)
         
-        # super rough heuristic for splitting heating vs cooling
-        # TODO: this should really be based on the balance point temp, not hardcoded 18/24
+        # Get outdoor temp for heating/cooling split
+        outdoor_temp = float(df['outdoor_temp'].iloc[0]) if 'outdoor_temp' in df.columns else 20.0
+        
+        # Rough heuristic for splitting heating vs cooling based on outdoor temp
         if outdoor_temp < 18:
             return total_load, np.array([0.0])  # heating season
         elif outdoor_temp > 24:
             return np.array([0.0]), total_load  # cooling season
         else:
-            # shoulder season - just split 50/50, close enough
+            # shoulder season - split 50/50
             return total_load * 0.5, total_load * 0.5
 
 
@@ -128,8 +179,13 @@ class MLService:
                     # It's already an EnergyPredictor from hvac.ml
                     self.energy_model = loaded
                 elif isinstance(loaded, dict) and 'model' in loaded:
-                    # It's a dict with model and metadata
-                    self.energy_model = SimpleEnergyPredictor(loaded['model'])
+                    # It's a dict with model, scaler, and metadata
+                    self.energy_model = SimpleEnergyPredictor(
+                        model=loaded['model'],
+                        scaler=loaded.get('scaler'),
+                        feature_names=loaded.get('feature_names'),
+                        model_type=loaded.get('model_type', 'random_forest')
+                    )
                 else:
                     # It's a raw sklearn model
                     self.energy_model = SimpleEnergyPredictor(loaded)
@@ -142,8 +198,13 @@ class MLService:
                     # It's already a LoadPredictor from hvac.ml
                     self.load_model = loaded
                 elif isinstance(loaded, dict) and 'model' in loaded:
-                    # It's a dict with model and metadata
-                    self.load_model = SimpleLoadPredictor(loaded['model'])
+                    # It's a dict with model, scaler, and metadata
+                    self.load_model = SimpleLoadPredictor(
+                        model=loaded['model'],
+                        scaler=loaded.get('scaler'),
+                        feature_names=loaded.get('feature_names'),
+                        model_type=loaded.get('model_type', 'random_forest')
+                    )
                 else:
                     # It's a raw sklearn model
                     self.load_model = SimpleLoadPredictor(loaded)
@@ -212,10 +273,13 @@ class MLService:
             # Make prediction
             prediction = self.energy_model.predict(df)[0]
             
-            # Get feature importance
+            # Get feature importance (convert numpy types to Python floats)
             importance = self.energy_model.get_feature_importance()
-            top_features = dict(sorted(importance.items(), 
-                                     key=lambda x: x[1], reverse=True)[:5])
+            top_features = {
+                k: float(v) for k, v in sorted(
+                    importance.items(), key=lambda x: x[1], reverse=True
+                )[:5]
+            }
             
             return {
                 "predicted_energy": float(prediction),
@@ -229,19 +293,52 @@ class MLService:
     
     def predict_loads(self, building_params: Dict[str, float]) -> Dict[str, Any]:
         """Predict heating and cooling loads."""
-        if not ML_AVAILABLE or not self.load_model:
-            return {"error": "Load model not available"}
+        if not ML_AVAILABLE:
+            return {"error": "ML dependencies not available"}
         
         try:
             df = pd.DataFrame([building_params])
-            heating_pred, cooling_pred = self.load_model.predict(df)
+            outdoor_temp = building_params.get('outdoor_temp', 20.0)
             
-            return {
-                "heating_load": float(heating_pred[0]),
-                "cooling_load": float(cooling_pred[0]),
-                "total_load": float(heating_pred[0] + cooling_pred[0]),
-                "unit": "kW"
-            }
+            # Try load model first
+            if self.load_model:
+                try:
+                    heating_pred, cooling_pred = self.load_model.predict(df)
+                    return {
+                        "heating_load": float(heating_pred[0]),
+                        "cooling_load": float(cooling_pred[0]),
+                        "total_load": float(heating_pred[0] + cooling_pred[0]),
+                        "unit": "kW"
+                    }
+                except Exception:
+                    pass  # Fall through to energy model fallback
+            
+            # Fallback: use energy model and split based on temperature
+            if self.energy_model:
+                total_energy = float(self.energy_model.predict(df)[0])
+                # Split into heating/cooling based on outdoor temperature
+                if outdoor_temp < 18:
+                    # Heating dominant
+                    heating_load = total_energy * 0.8
+                    cooling_load = total_energy * 0.2
+                elif outdoor_temp > 24:
+                    # Cooling dominant
+                    heating_load = total_energy * 0.1
+                    cooling_load = total_energy * 0.9
+                else:
+                    # Shoulder season
+                    heating_load = total_energy * 0.5
+                    cooling_load = total_energy * 0.5
+                
+                return {
+                    "heating_load": heating_load,
+                    "cooling_load": cooling_load,
+                    "total_load": heating_load + cooling_load,
+                    "unit": "kW",
+                    "note": "Estimated from energy model (load model unavailable)"
+                }
+            
+            return {"error": "No prediction model available"}
             
         except Exception as e:
             return {"error": str(e)}
@@ -253,18 +350,36 @@ class MLService:
             return {"error": "Model not available"}
         
         try:
-            # Test different setpoints
+            # Default parameters matching the model's expected features
+            default_params = {
+                'floor_area': 1000.0,
+                'height': 3.0,
+                'window_ratio': 0.3,
+                'insulation_r': 3.5,
+                'occupancy': 20.0,
+                'outdoor_temp': 20.0,
+                'solar_irradiance': 500.0,
+                'wind_speed': 5.0,
+            }
+            
+            # Merge with provided conditions (provided values override defaults)
+            base_params = {**default_params, **current_conditions}
+            
+            # Test different setpoints (simulated by varying outdoor temp relationship)
             setpoints = np.arange(18, 26, 0.5)
             predictions = []
             
             for setpoint in setpoints:
-                params = current_conditions.copy()
-                # Adjust parameters based on setpoint
-                params['outdoor_temp'] = current_conditions.get('outdoor_temp', 20)
+                params = base_params.copy()
+                # Simulate setpoint effect: lower setpoint = more cooling needed
+                # This adjusts the effective "load" by modifying the temperature differential
+                temp_differential = base_params.get('outdoor_temp', 20.0) - setpoint
+                # Higher differential means more energy needed
+                params['outdoor_temp'] = base_params.get('outdoor_temp', 20.0) + (setpoint - 22.0) * 0.5
                 
                 df = pd.DataFrame([params])
                 pred = self.energy_model.predict(df)[0]
-                predictions.append(pred)
+                predictions.append(float(pred))
             
             # Find closest to target
             predictions = np.array(predictions)
@@ -274,6 +389,8 @@ class MLService:
                 "optimal_setpoint": float(setpoints[best_idx]),
                 "predicted_energy": float(predictions[best_idx]),
                 "energy_savings": float(predictions[0] - predictions[best_idx]),
+                "all_setpoints": [float(s) for s in setpoints],
+                "all_predictions": [float(p) for p in predictions],
                 "unit": "kW"
             }
             

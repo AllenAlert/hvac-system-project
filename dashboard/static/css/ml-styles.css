@@ -76,3 +76,51 @@
   color: #059669;
   font-weight: 600;
 }
+
+/* HVAC Mode Styles */
+.mode-heating {
+  background: linear-gradient(135deg, #fef2f2, #fee2e2) !important;
+  border-color: #ef4444 !important;
+}
+
+.mode-heating .metric-value {
+  color: #dc2626 !important;
+}
+
+.mode-cooling {
+  background: linear-gradient(135deg, #eff6ff, #dbeafe) !important;
+  border-color: #3b82f6 !important;
+}
+
+.mode-cooling .metric-value {
+  color: #2563eb !important;
+}
+
+.mode-off {
+  background: #f8fafc;
+  border-color: #94a3b8;
+}
+
+.mode-off .metric-value {
+  color: #64748b;
+}
+
+.hvac-heating .metric-value {
+  color: #dc2626;
+}
+
+.hvac-cooling .metric-value {
+  color: #0284c7;
+}
+
+/* Energy totals section */
+.energy-totals {
+  background: linear-gradient(135deg, #faf5ff, #f3e8ff);
+  border: 1px solid #c4b5fd;
+  border-radius: 8px;
+  margin-top: 0.5rem;
+}
+
+.energy-totals .metric-card {
+  background: rgba(255, 255, 255, 0.8);
+}

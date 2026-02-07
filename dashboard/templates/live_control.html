@@ -15,10 +15,18 @@
   <div class="metric-card"><span class="metric-label">Outdoor T</span><span class="metric-value" id="m-T_out">—</span><span class="metric-unit">°C</span></div>
   <div class="metric-card"><span class="metric-label">Setpoint</span><span class="metric-value" id="m-setpoint">—</span><span class="metric-unit">°C</span></div>
   <div class="metric-card"><span class="metric-label">Error</span><span class="metric-value" id="m-error">—</span><span class="metric-unit">°C</span></div>
-  <div class="metric-card"><span class="metric-label">Cooling</span><span class="metric-value" id="m-cooling">—</span><span class="metric-unit">W</span></div>
+  <div class="metric-card" id="card-hvac-mode"><span class="metric-label">HVAC Mode</span><span class="metric-value" id="m-hvac-mode">—</span></div>
+  <div class="metric-card hvac-heating"><span class="metric-label"> Heating</span><span class="metric-value" id="m-heating">—</span><span class="metric-unit">W</span></div>
+  <div class="metric-card hvac-cooling"><span class="metric-label"> Cooling</span><span class="metric-value" id="m-cooling">—</span><span class="metric-unit">W</span></div>
   <div class="metric-card"><span class="metric-label">Occupancy</span><span class="metric-value" id="m-occupied">—</span></div>
   <div class="metric-card"><span class="metric-label">Strategy</span><span class="metric-value" id="m-strategy">—</span></div>
   <div class="metric-card"><span class="metric-label">Time</span><span class="metric-value" id="m-time">—</span></div>
+</section>
+
+<section class="live-metrics energy-totals" id="energy-totals">
+  <div class="metric-card"><span class="metric-label">Total Heating</span><span class="metric-value" id="m-total-heating">—</span><span class="metric-unit">kWh</span></div>
+  <div class="metric-card"><span class="metric-label">Total Cooling</span><span class="metric-value" id="m-total-cooling">—</span><span class="metric-unit">kWh</span></div>
+  <div class="metric-card"><span class="metric-label">Total Cost</span><span class="metric-value" id="m-total-cost">—</span><span class="metric-unit">$</span></div>
 </section>
 <p class="live-error" id="live-error" style="display:none; color:#dc2626; margin:0.5rem 0;"></p>
 
@@ -28,8 +36,8 @@
     <div class="chart-container"><canvas id="chart-temp" aria-label="Indoor vs setpoint"></canvas></div>
   </section>
   <section class="panel chart-panel">
-    <h3>HVAC power (W)</h3>
-    <div class="chart-container"><canvas id="chart-power" aria-label="Cooling power"></canvas></div>
+    <h3>HVAC Power (W)</h3>
+    <div class="chart-container"><canvas id="chart-power" aria-label="Heating and cooling power"></canvas></div>
   </section>
 </div>
 
@@ -104,20 +112,39 @@
       <input type="number" id="param-deadband" value="1" step="0.1">
     </div>
     <div class="param-group">
+      <label>Max heating (W)</label>
+      <input type="number" id="param-max-heating" value="8000" step="500">
+    </div>
+    <div class="param-group">
       <label>Max cooling (W)</label>
-      <input type="number" id="param-max-cooling" value="5000" step="100">
+      <input type="number" id="param-max-cooling" value="10000" step="500">
+    </div>
+    <div class="param-group">
+      <label>Heating type</label>
+      <select id="param-heating-type">
+        <option value="gas_furnace">Gas Furnace (92%)</option>
+        <option value="electric">Electric (100%)</option>
+        <option value="heat_pump_air">Air Source Heat Pump (COP 3.0)</option>
+        <option value="heat_pump_ground">Ground Source Heat Pump (COP 4.0)</option>
+        <option value="boiler_gas">Gas Boiler (90%)</option>
+        <option value="boiler_oil">Oil Boiler (85%)</option>
+      </select>
+    </div>
+    <div class="param-group">
+      <label>Cooling COP</label>
+      <input type="number" id="param-cooling-cop" value="3.0" step="0.1" min="1" max="6">
     </div>
     <div class="param-group">
       <label>Kp — PID</label>
-      <input type="number" id="param-Kp" value="0.5" step="0.05">
+      <input type="number" id="param-Kp" value="2000" step="100">
     </div>
     <div class="param-group">
       <label>Ki — PID</label>
-      <input type="number" id="param-Ki" value="0.05" step="0.01">
+      <input type="number" id="param-Ki" value="50" step="5">
     </div>
     <div class="param-group">
       <label>Kd — PID</label>
-      <input type="number" id="param-Kd" value="0.01" step="0.005">
+      <input type="number" id="param-Kd" value="100" step="10">
     </div>
     <div class="param-group">
       <label>MPC horizon (steps)</label>
@@ -164,10 +191,22 @@
     document.getElementById('m-T_out').textContent = s.T_out != null ? s.T_out.toFixed(2) : '—';
     document.getElementById('m-setpoint').textContent = s.setpoint != null ? s.setpoint.toFixed(2) : '—';
     document.getElementById('m-error').textContent = s.error != null ? s.error.toFixed(2) : '—';
+    document.getElementById('m-hvac-mode').textContent = s.hvac_mode || 'off';
+    document.getElementById('m-heating').textContent = s.heating != null ? s.heating.toFixed(0) : '—';
     document.getElementById('m-cooling').textContent = s.cooling != null ? s.cooling.toFixed(0) : '—';
     document.getElementById('m-occupied').textContent = s.occupied ? 'Yes' : 'No';
     document.getElementById('m-strategy').textContent = s.strategy || '—';
     document.getElementById('m-time').textContent = s.sim_time_sec != null ? formatTime(s.sim_time_sec) : '—';
+    // Energy totals
+    document.getElementById('m-total-heating').textContent = s.total_heating_kwh != null ? s.total_heating_kwh.toFixed(2) : '0.00';
+    document.getElementById('m-total-cooling').textContent = s.total_cooling_kwh != null ? s.total_cooling_kwh.toFixed(2) : '0.00';
+    document.getElementById('m-total-cost').textContent = s.total_cost != null ? s.total_cost.toFixed(2) : '0.00';
+    // Update HVAC mode card styling
+    const modeCard = document.getElementById('card-hvac-mode');
+    modeCard.classList.remove('mode-heating', 'mode-cooling', 'mode-off');
+    if (s.hvac_mode === 'heating') modeCard.classList.add('mode-heating');
+    else if (s.hvac_mode === 'cooling') modeCard.classList.add('mode-cooling');
+    else modeCard.classList.add('mode-off');
   }
 
   function fetchStatus() {
@@ -208,7 +247,10 @@
       type: 'line',
       data: {
         labels: [],
-        datasets: [{ label: 'Cooling W', data: [], borderColor: '#f59e0b', fill: true, tension: 0.1 }]
+        datasets: [
+          { label: 'Heating W', data: [], borderColor: '#ef4444', backgroundColor: 'rgba(239, 68, 68, 0.2)', fill: true, tension: 0.1 },
+          { label: 'Cooling W', data: [], borderColor: '#0ea5e9', backgroundColor: 'rgba(14, 165, 233, 0.2)', fill: true, tension: 0.1 }
+        ]
       },
       options: { ...common, scales: { x: { display: true }, y: { title: { display: true, text: 'W' }, beginAtZero: true } } }
     });
@@ -230,7 +272,8 @@
           chartTemp.data.datasets[1].data = history.slice(-HISTORY_BUFFER).map(r => r.setpoint);
           chartTemp.update('none');
           chartPower.data.labels = labels;
-          chartPower.data.datasets[0].data = history.slice(-HISTORY_BUFFER).map(r => r.cooling);
+          chartPower.data.datasets[0].data = history.slice(-HISTORY_BUFFER).map(r => r.heating || 0);
+          chartPower.data.datasets[1].data = history.slice(-HISTORY_BUFFER).map(r => r.cooling || 0);
           chartPower.update('none');
         }
       })
@@ -288,7 +331,10 @@
       setpoint_occupied: parseFloat(document.getElementById('param-setpoint-occupied').value),
       setpoint_unoccupied: parseFloat(document.getElementById('param-setpoint-unoccupied').value),
       deadband: parseFloat(document.getElementById('param-deadband').value),
+      max_heating: parseFloat(document.getElementById('param-max-heating').value),
       max_cooling: parseFloat(document.getElementById('param-max-cooling').value),
+      heating_type: document.getElementById('param-heating-type').value,
+      cooling_cop: parseFloat(document.getElementById('param-cooling-cop').value),
       Kp: parseFloat(document.getElementById('param-Kp').value),
       Ki: parseFloat(document.getElementById('param-Ki').value),
       Kd: parseFloat(document.getElementById('param-Kd').value),
