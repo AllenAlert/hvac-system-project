@@ -103,6 +103,9 @@ class SimConfigUpdate(BaseModel):
     Q_internal_occupied: float | None = None
     Q_internal_unoccupied: float | None = None
     max_cooling: float | None = None
+    max_heating: float | None = None
+    heating_type: str | None = None
+    electricity_band: str | None = None  # band_a, band_b, band_c, band_d, band_e
     setpoint_occupied: float | None = None
     setpoint_unoccupied: float | None = None
     strategy: str | None = None

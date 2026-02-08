@@ -23,6 +23,8 @@ from .controllers import (
     HeatingType,
     HEATING_EFFICIENCY,
     FUEL_COSTS,
+    ElectricityBand,
+    ELECTRICITY_RATES_NGN,
 )
 from .mpc_advanced import AdvancedMPC, MPCAdvancedConfig, create_advanced_mpc
 from .weather import get_outdoor_T
@@ -47,8 +49,16 @@ class SimConfig:
     max_heating: float = 8000.0   # heating capacity (W)
     heating_type: str = "gas_furnace"  # gas_furnace, electric, heat_pump_air, heat_pump_ground, boiler_gas, boiler_oil
     heating_efficiency: float = 0.92   # AFUE for furnace/boiler, COP for heat pump
-    fuel_cost_per_kwh: float = 0.04    # $/kWh equivalent for heating fuel
-    electricity_cost_per_kwh: float = 0.12  # $/kWh for cooling
+    
+    # --- Nigerian Electricity Pricing (NERC Tariff) ---
+    # Currency: Nigerian Naira (₦)
+    # Default: Band A (20+ hours supply) = ₦225/kWh
+    # 1 kWh at Band A costs ₦225
+    # ₦1000 = 4.44 kWh at Band A
+    electricity_band: str = "band_a"  # band_a, band_b, band_c, band_d, band_e
+    electricity_cost_per_kwh: float = 225.0  # ₦/kWh (Band A default)
+    fuel_cost_per_kwh: float = 80.0    # ₦/kWh equivalent for gas heating
+    currency: str = "NGN"  # Nigerian Naira
     
     # --- Setpoints ---
     setpoint_occupied: float = 22.0  # deg C
@@ -196,6 +206,11 @@ class Simulator:
                     self.config.heating_efficiency = HEATING_EFFICIENCY[ht]
                 if ht in FUEL_COSTS:
                     self.config.fuel_cost_per_kwh = FUEL_COSTS[ht]
+            # If electricity_band changed, update electricity rate
+            if "electricity_band" in kwargs:
+                band = kwargs["electricity_band"]
+                if band in ELECTRICITY_RATES_NGN:
+                    self.config.electricity_cost_per_kwh = ELECTRICITY_RATES_NGN[band]
             if "Kp" in kwargs or "Ki" in kwargs or "Kd" in kwargs:
                 self._pid = PIDController(
                     self.config.Kp,
@@ -433,8 +448,11 @@ class Simulator:
             "max_heating": c.max_heating,
             "heating_type": c.heating_type,
             "heating_efficiency": c.heating_efficiency,
-            "fuel_cost_per_kwh": c.fuel_cost_per_kwh,
+            # Nigerian Electricity Pricing (NERC)
+            "electricity_band": c.electricity_band,
             "electricity_cost_per_kwh": c.electricity_cost_per_kwh,
+            "fuel_cost_per_kwh": c.fuel_cost_per_kwh,
+            "currency": c.currency,
             # Setpoints
             "setpoint_occupied": c.setpoint_occupied,
             "setpoint_unoccupied": c.setpoint_unoccupied,
