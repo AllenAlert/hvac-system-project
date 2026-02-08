@@ -1,8 +1,3 @@
-"""
---- HVAC RC Thermal Model ---
-Resistor-Capacitor (RC) model for building thermal dynamics.
-
-"""
 import sqlite3
 import threading
 import time
@@ -33,59 +28,39 @@ from .occupancy import is_business_hours, get_setpoint
 
 @dataclass
 class SimConfig:
-    """Sim parameters. Defaults are roughly based on our office building."""
-    # --- RC thermal model params ---
-    R: float = 0.01  # K/W  (lower = better insulated)
-    C: float = 1e4   # J/K  (thermal mass - was 1e6 but that was way too slow)
-    dt_sec: float = 1.0  # sim timestep. smaller = smoother but more CPU
-    Q_internal_occupied: float = 500.0   # internal gains when ppl around (W)
-    Q_internal_unoccupied: float = 100.0 # just equipment (W)
-    
-    # --- Cooling System ---
-    max_cooling: float = 10000.0  # chiller capacity (W)
-    cooling_cop: float = 3.0      # coefficient of performance (electricity -> cooling)
-    
-    # --- Heating System ---
-    max_heating: float = 8000.0   # heating capacity (W)
-    heating_type: str = "gas_furnace"  # gas_furnace, electric, heat_pump_air, heat_pump_ground, boiler_gas, boiler_oil
-    heating_efficiency: float = 0.92   # AFUE for furnace/boiler, COP for heat pump
-    
-    # --- Nigerian Electricity Pricing (NERC Tariff) ---
-    # Currency: Nigerian Naira (₦)
-    # Default: Band A (20+ hours supply) = ₦225/kWh
-    # 1 kWh at Band A costs ₦225
-    # ₦1000 = 4.44 kWh at Band A
-    electricity_band: str = "band_a"  # band_a, band_b, band_c, band_d, band_e
-    electricity_cost_per_kwh: float = 225.0  # ₦/kWh (Band A default)
-    fuel_cost_per_kwh: float = 80.0    # ₦/kWh equivalent for gas heating
-    currency: str = "NGN"  # Nigerian Naira
-    
-    # --- Setpoints ---
-    setpoint_occupied: float = 22.0  # deg C
+    R: float = 0.01
+    C: float = 1e4
+    dt_sec: float = 1.0
+    Q_internal_occupied: float = 500.0
+    Q_internal_unoccupied: float = 100.0
+    max_cooling: float = 10000.0
+    cooling_cop: float = 3.0
+    max_heating: float = 8000.0
+    heating_type: str = "gas_furnace"
+    heating_efficiency: float = 0.92
+    electricity_band: str = "band_a"
+    electricity_cost_per_kwh: float = 225.0
+    fuel_cost_per_kwh: float = 80.0
+    currency: str = "NGN"
+    setpoint_occupied: float = 22.0
     setpoint_unoccupied: float = 18.0
-    # Strategy: rule, pid, mpc (simple), mpc_advanced (production)
     strategy: Literal["rule", "pid", "mpc", "mpc_advanced"] = "rule"
-    # Rule-based
     deadband: float = 1.0
-    # PID - tuned for 10kW system with C=1e4 J/K
-    Kp: float = 2000.0    # W per °C error
-    Ki: float = 50.0      # W per °C·s accumulated
-    Kd: float = 100.0     # W per °C/s rate
-    # MPC (simple)
+    Kp: float = 2000.0
+    Ki: float = 50.0
+    Kd: float = 100.0
     mpc_horizon_steps: int = 6
     mpc_weight_comfort: float = 1.0
     mpc_weight_energy: float = 0.1
-    # MPC Advanced (production-grade)
-    mpc_adv_prediction_horizon: int = 60    # 60 min lookahead
-    mpc_adv_control_horizon: int = 15       # 15 min control window
+    mpc_adv_prediction_horizon: int = 60
+    mpc_adv_control_horizon: int = 15
     mpc_adv_weight_comfort: float = 100.0
     mpc_adv_weight_energy: float = 1.0
     mpc_adv_weight_demand: float = 50.0
     mpc_adv_precool_hours: float = 1.5
-    mpc_adv_optimizer: str = "scipy"        # "grid" or "scipy"
-    # Overrides
-    occupancy_override: bool | None = None  # None = auto (business hours)
-    setpoint_override: float | None = None  # None = use occupied/unoccupied
+    mpc_adv_optimizer: str = "scipy"
+    occupancy_override: bool | None = None
+    setpoint_override: float | None = None
     weather_source: Literal["synthetic", "api"] = "synthetic"
     weather_lat: float = 6.5244
     weather_lon: float = 3.3792
@@ -93,24 +68,21 @@ class SimConfig:
 
 @dataclass
 class SimState:
-    """Current simulation state. Gets updated every tick."""
-    T_in: float = 25.0       # indoor temp - start a bit warm so you can see cooling kick in
-    T_out: float = 25.0      # outdoor (from weather module)
+    T_in: float = 25.0
+    T_out: float = 25.0
     setpoint: float = 22.0
-    cooling: float = 0.0     # current cooling output in W
-    heating: float = 0.0     # current heating output in W
-    hvac_mode: str = "off"   # "heating", "cooling", or "off"
+    cooling: float = 0.0
+    heating: float = 0.0
+    hvac_mode: str = "off"
     occupied: bool = True
-    strategy: str = "rule"   # active control strategy
+    strategy: str = "rule"
     sim_time_sec: float = 0.0
-    paused: bool = False     # pause button in UI
-    error: float = 0.0       # for PID - difference from setpoint
-    # Energy tracking
+    paused: bool = False
+    error: float = 0.0
     total_heating_kwh: float = 0.0
     total_cooling_kwh: float = 0.0
     total_cost: float = 0.0
-    # MPC Advanced diagnostics
-    mpc_mode: str = ""       # pre-cooling, occupied, setback
+    mpc_mode: str = ""
     mpc_cost_breakdown: dict = field(default_factory=dict)
     electricity_rate: float = 0.0
     predicted_trajectory: list = field(default_factory=list)
@@ -199,14 +171,12 @@ class Simulator:
             for k, v in kwargs.items():
                 if hasattr(self.config, k):
                     setattr(self.config, k, v)
-            # If heating_type changed, update efficiency and fuel cost
             if "heating_type" in kwargs:
                 ht = kwargs["heating_type"]
                 if ht in HEATING_EFFICIENCY:
                     self.config.heating_efficiency = HEATING_EFFICIENCY[ht]
                 if ht in FUEL_COSTS:
                     self.config.fuel_cost_per_kwh = FUEL_COSTS[ht]
-            # If electricity_band changed, update electricity rate
             if "electricity_band" in kwargs:
                 band = kwargs["electricity_band"]
                 if band in ELECTRICITY_RATES_NGN:
@@ -219,7 +189,6 @@ class Simulator:
                 )
             if "strategy" in kwargs and kwargs["strategy"] == "pid":
                 self._pid.reset()
-            # Recreate MPC advanced if relevant params changed
             mpc_adv_keys = {"mpc_adv_prediction_horizon", "mpc_adv_control_horizon",
                            "mpc_adv_weight_comfort", "mpc_adv_weight_energy",
                            "mpc_adv_weight_demand", "mpc_adv_precool_hours",
@@ -228,7 +197,6 @@ class Simulator:
                 self._mpc_advanced = self._create_mpc_advanced()
 
     def _create_mpc_advanced(self) -> AdvancedMPC:
-        """Create/recreate the advanced MPC controller with current config."""
         cfg = self.config
         return create_advanced_mpc(
             max_cooling=cfg.max_cooling,
@@ -252,24 +220,20 @@ class Simulator:
             st = self.state
             if st.paused:
                 return
-            # Occupancy
             if cfg.occupancy_override is not None:
                 occupied = cfg.occupancy_override
             else:
                 occupied = is_business_hours()
             st.occupied = occupied
-            # Setpoint
             if cfg.setpoint_override is not None:
                 setpoint = cfg.setpoint_override
             else:
                 setpoint = get_setpoint(occupied, cfg.setpoint_occupied, cfg.setpoint_unoccupied)
             st.setpoint = setpoint
-            # Outdoor T
             T_out = get_outdoor_T(cfg.weather_source, cfg.weather_lat, cfg.weather_lon)
             st.T_out = T_out
             Q_internal = cfg.Q_internal_occupied if occupied else cfg.Q_internal_unoccupied
             
-            # Control - now returns both heating and cooling
             heating = 0.0
             cooling = 0.0
             
@@ -289,8 +253,6 @@ class Simulator:
                 st.mpc_mode = ""
                 st.mpc_cost_breakdown = {}
             elif cfg.strategy == "mpc_advanced":
-                # MPC advanced currently only handles cooling
-                # TODO: extend mpc_advanced for heating
                 cooling, diagnostics = self._mpc_advanced.compute(
                     st.T_in, T_out, Q_internal, occupied, st.sim_time_sec
                 )
@@ -305,10 +267,9 @@ class Simulator:
                 st.predicted_trajectory = diagnostics.get("control_trajectory", [])
                 setpoint = diagnostics.get("setpoint", setpoint)
                 st.setpoint = setpoint
-                # If it's cold and no cooling needed, try heating
                 if cooling == 0 and st.T_in < setpoint - cfg.deadband:
                     heating = cfg.max_heating
-            else:  # mpc (simple)
+            else:
                 heating, cooling = mpc_simple_hvac(
                     st.T_in, T_out, cfg.R, cfg.C, Q_internal, setpoint,
                     cfg.mpc_horizon_steps, cfg.dt_sec,
@@ -319,13 +280,11 @@ class Simulator:
                 st.mpc_mode = ""
                 st.mpc_cost_breakdown = {}
             
-            # Update state
             st.heating = heating
             st.cooling = cooling
             st.strategy = cfg.strategy
             st.error = st.T_in - setpoint
             
-            # Determine HVAC mode
             if heating > 0:
                 st.hvac_mode = "heating"
             elif cooling > 0:
@@ -333,22 +292,18 @@ class Simulator:
             else:
                 st.hvac_mode = "off"
             
-            # Track energy consumption and cost
             dt_hours = cfg.dt_sec / 3600.0
             if heating > 0:
                 heating_kwh = (heating / 1000.0) * dt_hours
                 st.total_heating_kwh += heating_kwh
-                # Cost depends on heating type efficiency
                 fuel_kwh = heating_kwh / cfg.heating_efficiency if cfg.heating_efficiency > 0 else heating_kwh
                 st.total_cost += fuel_kwh * cfg.fuel_cost_per_kwh
             if cooling > 0:
                 cooling_kwh = (cooling / 1000.0) * dt_hours
                 st.total_cooling_kwh += cooling_kwh
-                # Electricity cost for cooling (input power = cooling / COP)
                 electricity_kwh = cooling_kwh / cfg.cooling_cop if cfg.cooling_cop > 0 else cooling_kwh
                 st.total_cost += electricity_kwh * cfg.electricity_cost_per_kwh
             
-            # RC step with both heating and cooling
             T_in_new, _ = step_rc(
                 st.T_in, T_out, cfg.R, cfg.C, Q_internal, cooling, cfg.dt_sec, heating
             )
@@ -359,7 +314,6 @@ class Simulator:
                 cooling, heating, st.hvac_mode, occupied, cfg.strategy,
             )
         except Exception:
-            # Don't kill the simulator thread; next step will retry
             pass
 
     def _run_loop(self) -> None:
@@ -403,26 +357,20 @@ class Simulator:
             "T_out": round(st.T_out, 2),
             "setpoint": round(st.setpoint, 2),
             "error": round(st.error, 2),
-            # Heating
             "heating": round(st.heating, 1),
             "heating_kw": round(st.heating / 1000, 2),
-            # Cooling
             "cooling": round(st.cooling, 1),
             "cooling_kw": round(st.cooling / 1000, 2),
-            # HVAC mode
             "hvac_mode": st.hvac_mode,
-            # Energy totals
             "total_heating_kwh": round(st.total_heating_kwh, 2),
             "total_cooling_kwh": round(st.total_cooling_kwh, 2),
             "total_cost": round(st.total_cost, 2),
-            # Other
             "occupied": st.occupied,
             "strategy": st.strategy,
             "sim_time_sec": round(st.sim_time_sec, 1),
             "paused": st.paused,
             "current_time": time.time(),
         }
-        # Add MPC advanced diagnostics if active
         if st.strategy == "mpc_advanced":
             status.update({
                 "mpc_mode": st.mpc_mode,
@@ -441,29 +389,23 @@ class Simulator:
             "dt_sec": c.dt_sec,
             "Q_internal_occupied": c.Q_internal_occupied,
             "Q_internal_unoccupied": c.Q_internal_unoccupied,
-            # Cooling
             "max_cooling": c.max_cooling,
             "cooling_cop": c.cooling_cop,
-            # Heating
             "max_heating": c.max_heating,
             "heating_type": c.heating_type,
             "heating_efficiency": c.heating_efficiency,
-            # Nigerian Electricity Pricing (NERC)
             "electricity_band": c.electricity_band,
             "electricity_cost_per_kwh": c.electricity_cost_per_kwh,
             "fuel_cost_per_kwh": c.fuel_cost_per_kwh,
             "currency": c.currency,
-            # Setpoints
             "setpoint_occupied": c.setpoint_occupied,
             "setpoint_unoccupied": c.setpoint_unoccupied,
             "strategy": c.strategy,
             "deadband": c.deadband,
             "Kp": c.Kp, "Ki": c.Ki, "Kd": c.Kd,
-            # Simple MPC
             "mpc_horizon_steps": c.mpc_horizon_steps,
             "mpc_weight_comfort": c.mpc_weight_comfort,
             "mpc_weight_energy": c.mpc_weight_energy,
-            # Advanced MPC
             "mpc_adv_prediction_horizon": c.mpc_adv_prediction_horizon,
             "mpc_adv_control_horizon": c.mpc_adv_control_horizon,
             "mpc_adv_weight_comfort": c.mpc_adv_weight_comfort,
@@ -471,7 +413,6 @@ class Simulator:
             "mpc_adv_weight_demand": c.mpc_adv_weight_demand,
             "mpc_adv_precool_hours": c.mpc_adv_precool_hours,
             "mpc_adv_optimizer": c.mpc_adv_optimizer,
-            # Overrides
             "occupancy_override": c.occupancy_override,
             "setpoint_override": c.setpoint_override,
             "weather_source": c.weather_source,
@@ -480,7 +421,6 @@ class Simulator:
         }
 
 
-# Singleton used by FastAPI
 _simulator: Simulator | None = None
 _sim_lock = threading.Lock()
 

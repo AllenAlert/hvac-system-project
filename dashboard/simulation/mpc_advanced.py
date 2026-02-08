@@ -1,17 +1,4 @@
-"""
-Advanced Model Predictive Control (MPC) for HVAC Systems.
 
-Production-grade implementation with:
-- Weather forecast integration (24-hour lookahead)
-- Occupancy schedule prediction
-- Time-of-use electricity pricing
-- Pre-cooling/pre-heating optimization
-- Solar gain estimation
-- Variable control trajectory (not constant over horizon)
-- Soft constraints with slack variables
-- Receding horizon with warm-start
-
-"""
 import math
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta, timezone
@@ -83,10 +70,6 @@ class MPCAdvancedConfig:
 
 
 class WeatherForecast:
-    """
-    Weather forecast provider.
-    Uses simple model if no API available, can be extended for real forecast APIs.
-    """
     def __init__(
         self,
         base_temp: float = 25.0,
@@ -131,10 +114,6 @@ class WeatherForecast:
 
 
 class OccupancyPredictor:
-    """
-    Occupancy prediction based on schedule and calendar.
-    Can be extended with ML models, calendar integration, etc.
-    """
     def __init__(self, schedule: list[float], utc_offset: float = 1.0):
         """
         schedule: 24-element list of occupancy probability by hour
@@ -201,17 +180,6 @@ def estimate_solar_gain(
 
 
 class AdvancedMPC:
-    """
-    Production-grade Model Predictive Controller.
-    
-    Features:
-    - Multi-step variable control trajectory
-    - Weather and occupancy forecasting
-    - Time-of-use electricity pricing
-    - Pre-cooling optimization
-    - Constraint handling with soft penalties
-    - Warm-starting from previous solution
-    """
     
     def __init__(self, config: MPCAdvancedConfig | None = None):
         self.config = config or MPCAdvancedConfig()
@@ -298,10 +266,6 @@ class AdvancedMPC:
         Q_internal_forecast: list[float],
         solar_forecast: list[float],
     ) -> np.ndarray:
-        """
-        Simulate building response to a control trajectory.
-        Returns predicted indoor temperature trajectory.
-        """
         cfg = self.config
         n_steps = len(control_trajectory)
         T_trajectory = np.zeros(n_steps + 1)
@@ -336,10 +300,6 @@ class AdvancedMPC:
         electricity_rates: np.ndarray,
         occupancy_forecast: list[float],
     ) -> tuple[float, dict]:
-        """
-        Compute total cost for a control trajectory.
-        Returns (total_cost, cost_breakdown).
-        """
         cfg = self.config
         n_steps = len(control_trajectory)
         
@@ -406,10 +366,6 @@ class AdvancedMPC:
         electricity_rates: np.ndarray,
         occupancy_forecast: list[float],
     ) -> tuple[np.ndarray, dict]:
-        """
-        Grid search optimization (simpler but less efficient).
-        Good for debugging and small problems.
-        """
         cfg = self.config
         n_control = cfg.control_horizon
         n_pred = cfg.prediction_horizon
@@ -465,10 +421,6 @@ class AdvancedMPC:
         electricity_rates: np.ndarray,
         occupancy_forecast: list[float],
     ) -> tuple[np.ndarray, dict]:
-        """
-        Scipy-based optimization (SLSQP or L-BFGS-B).
-        More efficient for larger problems.
-        """
         from scipy.optimize import minimize
         
         cfg = self.config
@@ -534,15 +486,6 @@ class AdvancedMPC:
         occupied: bool,
         sim_time_sec: float = 0.0,
     ) -> tuple[float, dict]:
-        """
-        Main MPC computation. Returns (cooling_output_watts, diagnostics).
-        
-        This is called every control timestep. It:
-        1. Updates forecasts with current observations
-        2. Generates setpoint trajectory
-        3. Optimizes control trajectory
-        4. Returns first control action (receding horizon)
-        """
         cfg = self.config
         self.stats["total_calls"] += 1
         

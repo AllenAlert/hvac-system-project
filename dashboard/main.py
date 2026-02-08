@@ -1,14 +1,3 @@
-"""
-HVAC System Project - Dashboard
-
-Built this dashboard to visualize and control HVAC simulations.
-The engineering calculations use some formulas I adapted from
-open source references, but the dashboard and ML integration is my own work.
-
-Run: uvicorn dashboard.main:app --reload
-
-@author: Bola
-"""
 from pathlib import Path
 from contextlib import asynccontextmanager
 
@@ -18,8 +7,6 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel
 
-# NOTE: order matters here - hvac_service imports pint which does some
-# global registry stuff that breaks if you import it after certain things
 from dashboard.services.hvac_service import (
     heating_load_calculate,
     heating_load_characteristic,
@@ -36,14 +23,9 @@ templates = Jinja2Templates(directory=BASE_DIR / "templates")
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # kick off the background sim thread
-    # wrapped in try/except bc this kept crashing on mike's laptop
-    # and we didn't want the whole app to die just for the sim
     try:
         get_simulator()
     except Exception as e:
-        # TODO: should probably log this somewhere
-        # print(f"sim failed to start: {e}")  # uncomment for debugging
         pass
     yield
 
@@ -52,12 +34,10 @@ app = FastAPI(title="HVAC System Project", description="HVAC simulation and cont
 app.mount("/static", StaticFiles(directory=BASE_DIR / "static"), name="static")
 
 
-# --- Request/response models ---
-
 class HeatingLoadRequest(BaseModel):
     T_int_degC: float = 20.0
     T_ext_min_degC: float = -8.0
-    H_trm_W_per_K: float = 0.143  # ~4 kW/K
+    H_trm_W_per_K: float = 0.143
     V_dot_ven_m3_hr: float = 100.0
     Q_dot_ihg_W: float = 500.0
     eta_sys_pct: float = 80.0
@@ -105,7 +85,7 @@ class SimConfigUpdate(BaseModel):
     max_cooling: float | None = None
     max_heating: float | None = None
     heating_type: str | None = None
-    electricity_band: str | None = None  # band_a, band_b, band_c, band_d, band_e
+    electricity_band: str | None = None
     setpoint_occupied: float | None = None
     setpoint_unoccupied: float | None = None
     strategy: str | None = None
@@ -150,8 +130,6 @@ class SimControlRequest(BaseModel):
     setpoint_override: float | None = None
 
 
-# --- Page routes ---
-
 @app.get("/", response_class=HTMLResponse)
 async def index(request: Request):
     return templates.TemplateResponse("overview.html", {"request": request})
@@ -176,8 +154,6 @@ async def radiator_page(request: Request):
 async def live_control_page(request: Request):
     return templates.TemplateResponse("live_control.html", {"request": request})
 
-
-# --- Simulation API routes ---
 
 def _get_sim():
     try:
@@ -224,8 +200,6 @@ async def api_sim_history(limit: int = 5000):
     limit = max(1, min(5000, limit))
     return _get_sim().get_history(limit=limit)
 
-
-# --- API routes ---
 
 @app.post("/api/heating-load")
 async def api_heating_load(body: HeatingLoadRequest):
@@ -316,7 +290,6 @@ async def api_radiator_operating(body: RadiatorOperatingRequest):
 
 @app.get("/api/overview")
 async def api_overview():
-    """Demo stats for overview dashboard."""
     return {
         "modules": [
             {"name": "Live Control", "path": "/live", "description": "Real-time RC simulation, rule-based / PID / MPC control"},
@@ -328,25 +301,20 @@ async def api_overview():
     }
 
 
-# --- ML API routes ---
-
 @app.get("/api/ml/status")
 async def api_ml_status():
-    """Get ML service status."""
     ml_service = get_ml_service()
     return ml_service.get_model_status()
 
 
 @app.post("/api/ml/train")
 async def api_ml_train(body: MLTrainingRequest):
-    """Train ML models."""
     ml_service = get_ml_service()
     return ml_service.train_models(n_samples=body.n_samples)
 
 
 @app.post("/api/ml/predict/energy")
 async def api_ml_predict_energy(body: MLPredictionRequest):
-    """Predict energy consumption."""
     ml_service = get_ml_service()
     params = body.model_dump()
     return ml_service.predict_energy(params)
@@ -354,7 +322,6 @@ async def api_ml_predict_energy(body: MLPredictionRequest):
 
 @app.post("/api/ml/predict/loads")
 async def api_ml_predict_loads(body: MLPredictionRequest):
-    """Predict heating and cooling loads."""
     ml_service = get_ml_service()
     params = body.model_dump()
     return ml_service.predict_loads(params)
@@ -362,7 +329,6 @@ async def api_ml_predict_loads(body: MLPredictionRequest):
 
 @app.post("/api/ml/optimize/setpoint")
 async def api_ml_optimize_setpoint(body: SetpointOptimizationRequest):
-    """Optimize setpoint for target energy."""
     ml_service = get_ml_service()
     return ml_service.optimize_setpoint(
         body.current_conditions, 
@@ -372,7 +338,6 @@ async def api_ml_optimize_setpoint(body: SetpointOptimizationRequest):
 
 @app.get("/api/ml/forecast")
 async def api_ml_forecast(hours_ahead: int = 24):
-    """Generate energy forecast based on simulation history."""
     try:
         sim = get_simulator()
         history = sim.get_history(limit=100)

@@ -4,79 +4,69 @@ from dataclasses import dataclass, field
 from typing import Literal
 
 
-# ============ Heating System Types ============
-
 class HeatingType:
-    """Heating system types with their typical efficiencies."""
-    GAS_FURNACE = "gas_furnace"           # 80-98% AFUE
-    ELECTRIC_RESISTANCE = "electric"       # 100% efficient (but expensive)
-    HEAT_PUMP_AIR = "heat_pump_air"        # COP 2.5-4.0
-    HEAT_PUMP_GROUND = "heat_pump_ground"  # COP 3.5-5.0
-    BOILER_GAS = "boiler_gas"             # 80-95% AFUE
-    BOILER_OIL = "boiler_oil"             # 80-90% AFUE
+    GAS_FURNACE = "gas_furnace"
+    ELECTRIC_RESISTANCE = "electric"
+    HEAT_PUMP_AIR = "heat_pump_air"
+    HEAT_PUMP_GROUND = "heat_pump_ground"
+    BOILER_GAS = "boiler_gas"
+    BOILER_OIL = "boiler_oil"
 
 HEATING_EFFICIENCY = {
     HeatingType.GAS_FURNACE: 0.92,
     HeatingType.ELECTRIC_RESISTANCE: 1.0,
-    HeatingType.HEAT_PUMP_AIR: 3.0,       # COP (varies with outdoor temp)
-    HeatingType.HEAT_PUMP_GROUND: 4.0,    # COP
+    HeatingType.HEAT_PUMP_AIR: 3.0,
+    HeatingType.HEAT_PUMP_GROUND: 4.0,
     HeatingType.BOILER_GAS: 0.90,
     HeatingType.BOILER_OIL: 0.85,
 }
 
-# ============ Nigerian Electricity Tariff Bands (NERC 2024) ============
-# Rates in Naira per kWh
 class ElectricityBand:
-    """Nigerian NERC electricity tariff bands based on supply hours."""
-    BAND_A = "band_a"  # 20+ hours supply - ₦225/kWh
-    BAND_B = "band_b"  # 16-20 hours - ₦63/kWh
-    BAND_C = "band_c"  # 12-16 hours - ₦50/kWh
-    BAND_D = "band_d"  # 8-12 hours - ₦43/kWh
-    BAND_E = "band_e"  # 4-8 hours - ₦40/kWh
+    BAND_A = "band_a"
+    BAND_B = "band_b"
+    BAND_C = "band_c"
+    BAND_D = "band_d"
+    BAND_E = "band_e"
 
 ELECTRICITY_RATES_NGN = {
-    ElectricityBand.BAND_A: 225.0,   # ₦225/kWh (premium - 20+ hours)
-    ElectricityBand.BAND_B: 63.0,    # ₦63/kWh (16-20 hours)
-    ElectricityBand.BAND_C: 50.0,    # ₦50/kWh (12-16 hours)
-    ElectricityBand.BAND_D: 43.0,    # ₦43/kWh (8-12 hours)
-    ElectricityBand.BAND_E: 40.0,    # ₦40/kWh (4-8 hours)
+    ElectricityBand.BAND_A: 225.0,
+    ElectricityBand.BAND_B: 63.0,
+    ElectricityBand.BAND_C: 50.0,
+    ElectricityBand.BAND_D: 43.0,
+    ElectricityBand.BAND_E: 40.0,
 }
 
-# Fuel costs in Naira per kWh equivalent
-# Gas: ~₦80/kWh, Diesel/Oil: ~₦150/kWh (generator fuel equivalent)
 FUEL_COSTS = {
-    HeatingType.GAS_FURNACE: 80.0,          # ₦80/kWh (natural gas)
-    HeatingType.ELECTRIC_RESISTANCE: 225.0,  # ₦225/kWh (Band A electricity)
-    HeatingType.HEAT_PUMP_AIR: 225.0,        # ₦225/kWh (Band A electricity)
-    HeatingType.HEAT_PUMP_GROUND: 225.0,     # ₦225/kWh (Band A electricity)
-    HeatingType.BOILER_GAS: 80.0,            # ₦80/kWh (natural gas)
-    HeatingType.BOILER_OIL: 150.0,           # ₦150/kWh (diesel equivalent)
+    HeatingType.GAS_FURNACE: 80.0,
+    HeatingType.ELECTRIC_RESISTANCE: 225.0,
+    HeatingType.HEAT_PUMP_AIR: 225.0,
+    HeatingType.HEAT_PUMP_GROUND: 225.0,
+    HeatingType.BOILER_GAS: 80.0,
+    HeatingType.BOILER_OIL: 150.0,
 }
 
 
 @dataclass
 class RuleBasedConfig:
-    setpoint_occupied: float = 22.0  # deg C
+    setpoint_occupied: float = 22.0
     setpoint_unoccupied: float = 18.0
-    deadband: float = 1.0  # prevents short-cycling (on-off-on-off...)
+    deadband: float = 1.0
 
 
 @dataclass
 class PIDConfig:
-    Kp: float = 2000.0    # W per °C error - aggressive proportional
-    Ki: float = 50.0      # W per °C·s - integral builds up over ~minutes
-    Kd: float = 100.0     # W per °C/s - dampens oscillation
+    Kp: float = 2000.0
+    Ki: float = 50.0
+    Kd: float = 100.0
     setpoint_occupied: float = 22.0
     setpoint_unoccupied: float = 18.0
 
 
 @dataclass
 class MPCConfig:
-    # model predictive control - looks ahead and optimizes
-    # honestly this is pretty simplified compared to real MPC
-    horizon_steps: int = 6  # 6 * 60s = 6 min lookahead
-    weight_comfort: float = 1.0  # how much we care about temp error
-    weight_energy: float = 0.1   # how much we care about energy use
+    horizon_steps: int = 6
+    weight_comfort: float = 1.0
+    weight_energy: float = 0.1
     setpoint_occupied: float = 22.0
     setpoint_unoccupied: float = 18.0
 
@@ -90,56 +80,37 @@ def rule_based_hvac(
     max_heating: float,
     max_cooling: float,
 ) -> tuple[float, float]:
-    """
-    Classic bang-bang thermostat with hysteresis for both heating and cooling.
-    Returns (heating_output, cooling_output) in Watts.
-    
-    Uses proper hysteresis to prevent rapid on/off cycling:
-    - Cooling: turns ON above (setpoint + deadband), stays ON until below (setpoint - deadband/2)
-    - Heating: turns ON below (setpoint - deadband), stays ON until above (setpoint + deadband/2)
-    """
-    # Define temperature bands with proper hysteresis
-    # Key insight: once ON, system should run until PAST the setpoint to avoid cycling
-    cool_on = setpoint + deadband           # start cooling above this (e.g., 23°C)
-    cool_off = setpoint - deadband / 2      # stop cooling below this (e.g., 21.5°C) - overshoot allowed
-    heat_on = setpoint - deadband           # start heating below this (e.g., 21°C)
-    heat_off = setpoint + deadband / 2      # stop heating above this (e.g., 22.5°C) - overshoot allowed
+    cool_on = setpoint + deadband
+    cool_off = setpoint - deadband / 2
+    heat_on = setpoint - deadband
+    heat_off = setpoint + deadband / 2
     
     heating = 0.0
     cooling = 0.0
     
-    # Cooling logic - with proper hysteresis
     if current_cooling > 0:
-        # Already cooling - keep cooling until we're well below setpoint
         if T_in <= cool_off:
             cooling = 0.0
         else:
             cooling = max_cooling
     else:
-        # Not cooling - only start if above cool_on threshold
         if T_in >= cool_on:
             cooling = max_cooling
         else:
             cooling = 0.0
     
-    # Heating logic - with proper hysteresis
     if current_heating > 0:
-        # Already heating - keep heating until we're well above setpoint
         if T_in >= heat_off:
             heating = 0.0
         else:
             heating = max_heating
     else:
-        # Not heating - only start if below heat_on threshold
         if T_in <= heat_on:
             heating = max_heating
         else:
             heating = 0.0
     
-    # Safety: never heat and cool at the same time
     if heating > 0 and cooling > 0:
-        # Temperature is somehow in both bands (shouldn't happen with proper deadband)
-        # Prefer the one that moves us toward setpoint
         if T_in > setpoint:
             heating = 0.0
         else:
@@ -155,9 +126,6 @@ def rule_based(
     cooling_current: float,
     max_cooling: float,
 ) -> float:
-  
-  
-  
     _, cooling = rule_based_hvac(
         T_in, setpoint, deadband,
         0.0, cooling_current,
@@ -187,7 +155,6 @@ class PIDController:
         t: float,
         max_cooling: float,
     ) -> float:
-  
         _, cooling = self.compute_hvac(T_in, setpoint, t, 0.0, max_cooling)
         return cooling
     
@@ -204,10 +171,9 @@ class PIDController:
         if self._last_t is not None:
             dt = t - self._last_t
         if dt <= 0:
-            dt = 60.0  # assume 60 s if first call
+            dt = 60.0
 
         self._integral += error * dt
-  
         self._integral = max(-200, min(200, self._integral))
 
         derivative = 0.0
@@ -217,12 +183,8 @@ class PIDController:
         self._last_error = error
         self._last_t = t
 
-        # PID output
         u = self.Kp * error + self.Ki * self._integral + self.Kd * derivative
         
-        # Split output into heating and cooling
-        # u > 0: need cooling (temperature too high)
-        # u < 0: need heating (temperature too low)
         heating = 0.0
         cooling = 0.0
         
@@ -247,7 +209,6 @@ def mpc_simple(
     weight_energy: float,
     max_cooling: float,
 ) -> float:
- 
     _, cooling = mpc_simple_hvac(
         T_in, T_out, R, C, Q_internal, setpoint,
         horizon_steps, dt_sec, weight_comfort, weight_energy,
@@ -279,12 +240,10 @@ def mpc_simple_hvac(
     best_cooling = 0.0
     best_cost = 1e30
     
-    # Discrete options for heating and cooling
     n_options = 11
     
     for i in range(n_options):
         for j in range(n_options):
-            # Don't heat and cool simultaneously
             if i > 0 and j > 0:
                 continue
                 
@@ -298,12 +257,8 @@ def mpc_simple_hvac(
                 T, _ = step_rc(T, T_out, R, C, Q_internal, Q_cool, dt_sec, Q_heat)
                 error = T - setpoint
                 
-                # Comfort cost
                 cost += weight_comfort * (error ** 2)
                 
-                # Energy cost (account for efficiency)
-                # Heating: actual fuel use = output / efficiency
-                # Cooling: electricity use = output / COP
                 heating_energy = Q_heat / heating_efficiency if heating_efficiency > 0 else Q_heat
                 cooling_energy = Q_cool / cooling_cop if cooling_cop > 0 else Q_cool
                 cost += weight_energy * (heating_energy + cooling_energy)

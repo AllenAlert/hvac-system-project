@@ -21,10 +21,7 @@ except ImportError:
 
 
 class SimpleEnergyPredictor:
-    """
-    Wrapper for the sklearn model. Had to add this because the hvac.ml
-    predictors have a different interface and I didn't want to refactor everything.
-    """
+    
     
     def __init__(self, model, scaler=None, feature_names=None, model_type="random_forest"):
         self.model = model

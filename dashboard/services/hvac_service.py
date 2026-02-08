@@ -1,10 +1,7 @@
-
 from datetime import date, time
 import sys
 from pathlib import Path
 
-# this is a bit hacky but we need the hvac package importable
-# even when running from a different directory
 _project_root = Path(__file__).resolve().parents[2]
 if str(_project_root) not in sys.path:
     sys.path.insert(0, str(_project_root))
@@ -14,22 +11,19 @@ from hvac.energy_estimation.load import HeatingLoad
 from hvac.radiant_emitter.panel_radiator import PanelRadiator
 from hvac.sun.surface import Location, Surface
 
-Q_ = Quantity  # shorthand, pint convention
+Q_ = Quantity
 
 
 def quantity_to_json(q: Quantity) -> dict:
-    """Convert a Pint Quantity to JSON-friendly dict."""
     if q is None:
         return None
     try:
         import math
         val = float(q.m)
-        # NaN breaks JSON serialization, learned that the hard way
         if math.isnan(val):
             val = None
         return {"value": val, "unit": str(q.u)}
     except Exception:
-        # shouldn't happen but just in case
         return {"value": None, "unit": ""}
 
 
@@ -43,10 +37,6 @@ def heating_load_calculate(
     T_ext_current_degC: float | None = None,
     num_hours: float | None = None,
 ) -> dict:
-    """
-    Compute heating load using hvac.energy_estimation.load.HeatingLoad.
-    All numeric inputs are in SI-friendly units; we convert to Quantity inside.
-    """
     load = HeatingLoad(
         T_int=Q_(T_int_degC, "degC"),
         T_ext_min=Q_(T_ext_min_degC, "degC"),
@@ -80,7 +70,6 @@ def heating_load_characteristic(
     Q_dot_ihg_W: float,
     eta_sys_pct: float,
 ) -> dict:
-    """Get load curve (T_ext vs Q_dot_in) for charting."""
     load = HeatingLoad(
         T_int=Q_(T_int_degC, "degC"),
         T_ext_min=Q_(T_ext_min_degC, "degC"),
@@ -113,10 +102,6 @@ def solar_position(
     surface_azimuth_deg: float = 0.0,
     surface_slope_deg: float = 0.0,
 ) -> dict:
-    """
-    Get solar position and basic angles for a location and optional surface.
-    Surface: azimuth (S=0°, E=-90°, W=+90°), slope from horizontal.
-    """
     loc = Location(fi=Q_(latitude_deg, "deg"))
     loc.date = date(year, month, day)
     loc.solar_time = time(hour, minute, 0)
@@ -144,9 +129,6 @@ def panel_radiator_design(
     Ti_nom_degC: float,
     n_exp: float,
 ) -> dict:
-    """
-    Create a PanelRadiator from nominal specs and return key design values.
-    """
     rad = PanelRadiator(
         Qe_dot_nom=Q_(Qe_dot_nom_W, "W"),
         Tw_sup_nom=Q_(Tw_sup_nom_degC, "degC"),
@@ -174,10 +156,6 @@ def panel_radiator_operating(
     Tw_sup_degC: float | None = None,
     Vw_dot_L_s: float | None = None,
 ) -> dict:
-    """
-    Get operating point: set Ti and exactly one of Qe_dot, Tw_sup, Vw_dot;
-    returns the single solved quantity.
-    """
     rad = PanelRadiator(
         Qe_dot_nom=Q_(Qe_dot_nom_W, "W"),
         Tw_sup_nom=Q_(Tw_sup_nom_degC, "degC"),
@@ -192,7 +170,6 @@ def panel_radiator_operating(
     out = rad(Ti=Ti, Qe_dot=Qe, Tw_sup=Tw_sup, Vw_dot=Vw)
     if out is None:
         return {}
-    # Return in user-friendly units
     if str(out.u) == "watt":
         return {"solved": quantity_to_json(out.to("W")), "quantity": "Qe_dot"}
     if "kelvin" in str(out.u) or "degC" in str(out.u):

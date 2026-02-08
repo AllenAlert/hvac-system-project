@@ -1,12 +1,8 @@
-"""
-Occupancy: business hours (8–18) or manual override.
-"""
 from datetime import datetime, timezone
 from typing import Literal
 
 
 def is_business_hours(utc_offset_hours: float = 1.0) -> bool:
-    """True if local time is 8:00–18:00. utc_offset_hours: local = UTC + offset."""
     now = datetime.now(timezone.utc)
     from datetime import timedelta
     local = now + timedelta(hours=utc_offset_hours)

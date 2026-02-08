@@ -250,18 +250,7 @@ class RobustnessTestRunner:
         max_cooling_fn: Callable[[float, float], float] | None = None,
         max_heating_fn: Callable[[float, float], float] | None = None,
     ) -> TestResults:
-        """
-        Run a single test with specified disturbances.
-        
-        Args:
-            controller_name: "rule", "pid", "mpc"
-            weather_fn: (t_hours, base_temp) -> T_out
-            occupancy_fn: (t_hours, base_occ) -> (occupied, Q_internal)
-            R_fn: (nominal_R, t_hours) -> actual_R (optional)
-            C_fn: (nominal_C, t_hours) -> actual_C (optional)
-            max_cooling_fn: capacity degradation function (optional)
-            max_heating_fn: capacity degradation function (optional)
-        """
+       
         cfg = self.config
         n_steps = int(cfg.duration_hours * 3600 / cfg.dt_sec)
         
@@ -479,7 +468,7 @@ def run_occupancy_disturbance_tests() -> dict:
 
 
 def run_parameter_drift_tests() -> dict:
-    """Test suite for system parameter changes (model mismatch)."""
+    
     print("\n" + "="*60)
     print("PARAMETER DRIFT / MODEL MISMATCH TESTS")
     print("="*60)
