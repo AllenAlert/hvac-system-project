@@ -1,0 +1,457 @@
+{
+  "heat_wave": {
+    "rule": {
+      "comfort_violations_pct": 99.93055555555556,
+      "max_deviation": 55.61294858785942,
+      "avg_deviation": 38.52807808288142,
+      "rms_error": 39.874981138020054,
+      "total_heating_kwh": 95.86666666666807,
+      "total_cooling_kwh": 120.00000000000122,
+      "peak_power_kw": 10.0,
+      "oscillation_count": 1438,
+      "recovery_time_min": 0.0
+    },
+    "pid": {
+      "comfort_violations_pct": 99.93055555555556,
+      "max_deviation": 55.35863074299324,
+      "avg_deviation": 38.531657715831294,
+      "rms_error": 39.877281139390064,
+      "total_heating_kwh": 95.86666666666807,
+      "total_cooling_kwh": 120.00000000000122,
+      "peak_power_kw": 10.0,
+      "oscillation_count": 1438,
+      "recovery_time_min": 0.0
+    },
+    "mpc": {
+      "comfort_violations_pct": 92.70833333333333,
+      "max_deviation": 6.302544692172681,
+      "avg_deviation": 3.533007812475676,
+      "rms_error": 3.8771724737209774,
+      "total_heating_kwh": 0.0,
+      "total_cooling_kwh": 36.78333333333368,
+      "peak_power_kw": 3.0,
+      "oscillation_count": 0,
+      "recovery_time_min": 289.0
+    }
+  },
+  "cold_snap": {
+    "rule": {
+      "comfort_violations_pct": 95.0,
+      "max_deviation": 79.13338431603476,
+      "avg_deviation": 35.86577697228459,
+      "rms_error": 48.042617681898605,
+      "total_heating_kwh": 102.93333333333509,
+      "total_cooling_kwh": 102.16666666666738,
+      "peak_power_kw": 10.0,
+      "oscillation_count": 1226,
+      "recovery_time_min": 68.99999999999991
+    },
+    "pid": {
+      "comfort_violations_pct": 94.02777777777777,
+      "max_deviation": 78.03732240644374,
+      "avg_deviation": 33.69284725274492,
+      "rms_error": 45.522731118594415,
+      "total_heating_kwh": 102.12838943865323,
+      "total_cooling_kwh": 94.93664255307995,
+      "peak_power_kw": 10.0,
+      "oscillation_count": 1227,
+      "recovery_time_min": 15.999999999999943
+    },
+    "mpc": {
+      "comfort_violations_pct": 99.93055555555556,
+      "max_deviation": 9.35509615591352,
+      "avg_deviation": 6.604309159013611,
+      "rms_error": 6.706833623847812,
+      "total_heating_kwh": 49.61333333333274,
+      "total_cooling_kwh": 0.0,
+      "peak_power_kw": 2.4,
+      "oscillation_count": 0,
+      "recovery_time_min": 0.0
+    }
+  },
+  "rapid_front": {
+    "rule": {
+      "comfort_violations_pct": 99.93055555555556,
+      "max_deviation": 60.543580731418466,
+      "avg_deviation": 38.52070375066682,
+      "rms_error": 40.97311590579931,
+      "total_heating_kwh": 95.86666666666807,
+      "total_cooling_kwh": 120.00000000000122,
+      "peak_power_kw": 10.0,
+      "oscillation_count": 1438,
+      "recovery_time_min": 0.0
+    },
+    "pid": {
+      "comfort_violations_pct": 99.93055555555556,
+      "max_deviation": 60.543580731418466,
+      "avg_deviation": 38.52070375066682,
+      "rms_error": 40.97311590579931,
+      "total_heating_kwh": 95.86666666666807,
+      "total_cooling_kwh": 120.00000000000122,
+      "peak_power_kw": 10.0,
+      "oscillation_count": 1438,
+      "recovery_time_min": 0.0
+    },
+    "mpc": {
+      "comfort_violations_pct": 64.86111111111111,
+      "max_deviation": 9.750436243501841,
+      "avg_deviation": 3.78597692916908,
+      "rms_error": 4.59465986832831,
+      "total_heating_kwh": 3.0399999999999943,
+      "total_cooling_kwh": 8.600000000000007,
+      "peak_power_kw": 1.0,
+      "oscillation_count": 0,
+      "recovery_time_min": 35.99999999999998
+    }
+  },
+  "high_variability": {
+    "rule": {
+      "comfort_violations_pct": 99.93055555555556,
+      "max_deviation": 55.9715461966435,
+      "avg_deviation": 38.52520335722062,
+      "rms_error": 39.13047595934176,
+      "total_heating_kwh": 95.86666666666807,
+      "total_cooling_kwh": 120.00000000000122,
+      "peak_power_kw": 10.0,
+      "oscillation_count": 1438,
+      "recovery_time_min": 0.0
+    },
+    "pid": {
+      "comfort_violations_pct": 99.93055555555556,
+      "max_deviation": 55.961601517098586,
+      "avg_deviation": 38.513335747852366,
+      "rms_error": 39.132851140007,
+      "total_heating_kwh": 95.86666666666807,
+      "total_cooling_kwh": 120.00000000000122,
+      "peak_power_kw": 10.0,
+      "oscillation_count": 1438,
+      "recovery_time_min": 0.0
+    },
+    "mpc": {
+      "comfort_violations_pct": 74.79166666666667,
+      "max_deviation": 6.729443785479814,
+      "avg_deviation": 2.4409976475172743,
+      "rms_error": 2.934268738396498,
+      "total_heating_kwh": 0.0,
+      "total_cooling_kwh": 10.166666666666751,
+      "peak_power_kw": 2.0,
+      "oscillation_count": 0,
+      "recovery_time_min": 0.9999999999999432
+    }
+  },
+  "sudden_crowd": {
+    "rule": {
+      "comfort_violations_pct": 85.06944444444444,
+      "max_deviation": 73.38454134734283,
+      "avg_deviation": 32.053505163329184,
+      "rms_error": 37.10129443369345,
+      "total_heating_kwh": 76.26666666666709,
+      "total_cooling_kwh": 108.83333333333424,
+      "peak_power_kw": 10.0,
+      "oscillation_count": 1144,
+      "recovery_time_min": 0.0
+    },
+    "pid": {
+      "comfort_violations_pct": 99.86111111111111,
+      "max_deviation": 78.70514136387769,
+      "avg_deviation": 37.689942701459735,
+      "rms_error": 40.17261310319312,
+      "total_heating_kwh": 90.58335000000113,
+      "total_cooling_kwh": 126.5000000000014,
+      "peak_power_kw": 10.0,
+      "oscillation_count": 1358,
+      "recovery_time_min": 0.0
+    },
+    "mpc": {
+      "comfort_violations_pct": 61.388888888888886,
+      "max_deviation": 6.411291688709678,
+      "avg_deviation": 1.7928223584155205,
+      "rms_error": 2.2616766257352587,
+      "total_heating_kwh": 0.0,
+      "total_cooling_kwh": 30.016666666666538,
+      "peak_power_kw": 6.0,
+      "oscillation_count": 0,
+      "recovery_time_min": 194.00000000000006
+    }
+  },
+  "unexpected_vacancy": {
+    "rule": {
+      "comfort_violations_pct": 99.86111111111111,
+      "max_deviation": 50.070735802549905,
+      "avg_deviation": 38.49427021652865,
+      "rms_error": 39.230829238545326,
+      "total_heating_kwh": 95.86666666666807,
+      "total_cooling_kwh": 119.83333333333455,
+      "peak_power_kw": 10.0,
+      "oscillation_count": 1437,
+      "recovery_time_min": 0.0
+    },
+    "pid": {
+      "comfort_violations_pct": 99.86111111111111,
+      "max_deviation": 50.60027434605741,
+      "avg_deviation": 38.517826084491766,
+      "rms_error": 39.24590980804796,
+      "total_heating_kwh": 95.94169166666806,
+      "total_cooling_kwh": 119.83333333333455,
+      "peak_power_kw": 10.0,
+      "oscillation_count": 1438,
+      "recovery_time_min": 0.0
+    },
+    "mpc": {
+      "comfort_violations_pct": 77.91666666666667,
+      "max_deviation": 6.4094014939918935,
+      "avg_deviation": 2.271993575959847,
+      "rms_error": 2.826789596210673,
+      "total_heating_kwh": 0.0,
+      "total_cooling_kwh": 6.299999999999983,
+      "peak_power_kw": 1.0,
+      "oscillation_count": 0,
+      "recovery_time_min": 267.00000000000006
+    }
+  },
+  "irregular_schedule": {
+    "rule": {
+      "comfort_violations_pct": 99.93055555555556,
+      "max_deviation": 57.47997144216221,
+      "avg_deviation": 38.5250142641477,
+      "rms_error": 38.90399246146612,
+      "total_heating_kwh": 95.86666666666807,
+      "total_cooling_kwh": 120.00000000000122,
+      "peak_power_kw": 10.0,
+      "oscillation_count": 1438,
+      "recovery_time_min": 0.0
+    },
+    "pid": {
+      "comfort_violations_pct": 99.93055555555556,
+      "max_deviation": 51.497971442162225,
+      "avg_deviation": 38.522047002242935,
+      "rms_error": 38.8986708653285,
+      "total_heating_kwh": 95.86666666666807,
+      "total_cooling_kwh": 119.98338333333456,
+      "peak_power_kw": 10.0,
+      "oscillation_count": 1438,
+      "recovery_time_min": 0.0
+    },
+    "mpc": {
+      "comfort_violations_pct": 83.95833333333333,
+      "max_deviation": 6.399707737412186,
+      "avg_deviation": 2.7729244458162494,
+      "rms_error": 3.1831148017959823,
+      "total_heating_kwh": 0.0,
+      "total_cooling_kwh": 10.516666666666769,
+      "peak_power_kw": 1.0,
+      "oscillation_count": 0,
+      "recovery_time_min": 269.00000000000006
+    }
+  },
+  "random_bursts": {
+    "rule": {
+      "comfort_violations_pct": 99.86111111111111,
+      "max_deviation": 59.55584107460797,
+      "avg_deviation": 38.44378620399487,
+      "rms_error": 39.09557040315221,
+      "total_heating_kwh": 95.86666666666807,
+      "total_cooling_kwh": 119.83333333333455,
+      "peak_power_kw": 10.0,
+      "oscillation_count": 1437,
+      "recovery_time_min": 0.0
+    },
+    "pid": {
+      "comfort_violations_pct": 99.86111111111111,
+      "max_deviation": 59.55584107460797,
+      "avg_deviation": 38.45271775161392,
+      "rms_error": 39.09866383154298,
+      "total_heating_kwh": 95.91668333333473,
+      "total_cooling_kwh": 119.83333333333455,
+      "peak_power_kw": 10.0,
+      "oscillation_count": 1438,
+      "recovery_time_min": 0.0
+    },
+    "mpc": {
+      "comfort_violations_pct": 60.69444444444444,
+      "max_deviation": 6.402619498208061,
+      "avg_deviation": 1.9008302266309391,
+      "rms_error": 2.469711889020002,
+      "total_heating_kwh": 0.0,
+      "total_cooling_kwh": 19.6500000000003,
+      "peak_power_kw": 3.0,
+      "oscillation_count": 0,
+      "recovery_time_min": 0.9999999999999432
+    }
+  },
+  "insulation_degradation": {
+    "rule": {
+      "comfort_violations_pct": 99.44444444444444,
+      "max_deviation": 55.54951346705302,
+      "avg_deviation": 44.43874648869074,
+      "rms_error": 45.06310865793234,
+      "total_heating_kwh": 95.46666666666805,
+      "total_cooling_kwh": 119.33333333333454,
+      "peak_power_kw": 10.0,
+      "oscillation_count": 1431,
+      "recovery_time_min": 0.0
+    },
+    "pid": {
+      "comfort_violations_pct": 99.86111111111111,
+      "max_deviation": 55.54976730842546,
+      "avg_deviation": 44.61281202007227,
+      "rms_error": 45.14941729941278,
+      "total_heating_kwh": 95.91668333333473,
+      "total_cooling_kwh": 119.83333333333455,
+      "peak_power_kw": 10.0,
+      "oscillation_count": 1438,
+      "recovery_time_min": 0.0
+    },
+    "mpc": {
+      "comfort_violations_pct": 69.65277777777777,
+      "max_deviation": 6.2380940129762585,
+      "avg_deviation": 2.3183910333189104,
+      "rms_error": 2.8186614114695225,
+      "total_heating_kwh": 0.0,
+      "total_cooling_kwh": 10.016666666666744,
+      "peak_power_kw": 1.0,
+      "oscillation_count": 0,
+      "recovery_time_min": 131.0
+    }
+  },
+  "capacity_loss": {
+    "rule": {
+      "comfort_violations_pct": 99.93055555555556,
+      "max_deviation": 62.42880801990404,
+      "avg_deviation": 34.080411841520124,
+      "rms_error": 39.89279694790413,
+      "total_heating_kwh": 95.86666666666807,
+      "total_cooling_kwh": 95.0,
+      "peak_power_kw": 9.994791666666666,
+      "oscillation_count": 1438,
+      "recovery_time_min": 0.0
+    },
+    "pid": {
+      "comfort_violations_pct": 99.93055555555556,
+      "max_deviation": 62.48854599939365,
+      "avg_deviation": 34.081446864815035,
+      "rms_error": 39.89729279511855,
+      "total_heating_kwh": 95.86666666666807,
+      "total_cooling_kwh": 95.0,
+      "peak_power_kw": 9.994791666666666,
+      "oscillation_count": 1438,
+      "recovery_time_min": 0.0
+    },
+    "mpc": {
+      "comfort_violations_pct": 93.125,
+      "max_deviation": 6.228385511951814,
+      "avg_deviation": 3.5581424122504335,
+      "rms_error": 3.8967515104595916,
+      "total_heating_kwh": 0.0,
+      "total_cooling_kwh": 36.78333333333368,
+      "peak_power_kw": 3.0,
+      "oscillation_count": 0,
+      "recovery_time_min": 3.0000000000000426
+    }
+  },
+  "thermal_mass_change": {
+    "rule": {
+      "comfort_violations_pct": 85.06944444444444,
+      "max_deviation": 45.180085612556056,
+      "avg_deviation": 19.433788916390352,
+      "rms_error": 21.7308229902163,
+      "total_heating_kwh": 81.60000000000069,
+      "total_cooling_kwh": 102.16666666666738,
+      "peak_power_kw": 10.0,
+      "oscillation_count": 1224,
+      "recovery_time_min": 0.0
+    },
+    "pid": {
+      "comfort_violations_pct": 99.86111111111111,
+      "max_deviation": 53.546974111876544,
+      "avg_deviation": 24.106238856525707,
+      "rms_error": 25.33900059292239,
+      "total_heating_kwh": 95.91668333333473,
+      "total_cooling_kwh": 119.83333333333455,
+      "peak_power_kw": 10.0,
+      "oscillation_count": 1438,
+      "recovery_time_min": 0.0
+    },
+    "mpc": {
+      "comfort_violations_pct": 61.666666666666664,
+      "max_deviation": 6.395289931098731,
+      "avg_deviation": 1.886858695311651,
+      "rms_error": 2.3585399221004315,
+      "total_heating_kwh": 0.0,
+      "total_cooling_kwh": 10.016666666666744,
+      "peak_power_kw": 1.0,
+      "oscillation_count": 0,
+      "recovery_time_min": 147.9999999999999
+    }
+  },
+  "combined_drift": {
+    "rule": {
+      "comfort_violations_pct": 99.375,
+      "max_deviation": 47.82774041045752,
+      "avg_deviation": 22.96366448737538,
+      "rms_error": 24.863261844058467,
+      "total_heating_kwh": 95.46666666666805,
+      "total_cooling_kwh": 94.18923611111111,
+      "peak_power_kw": 9.947916666666666,
+      "oscillation_count": 1430,
+      "recovery_time_min": 0.0
+    },
+    "pid": {
+      "comfort_violations_pct": 99.86111111111111,
+      "max_deviation": 53.494339555429306,
+      "avg_deviation": 23.155696781138477,
+      "rms_error": 25.026680756908753,
+      "total_heating_kwh": 95.91668333333473,
+      "total_cooling_kwh": 94.85416666666666,
+      "peak_power_kw": 9.989583333333332,
+      "oscillation_count": 1438,
+      "recovery_time_min": 0.0
+    },
+    "mpc": {
+      "comfort_violations_pct": 69.72222222222223,
+      "max_deviation": 6.225590752601505,
+      "avg_deviation": 2.3177176267457216,
+      "rms_error": 2.8155422738514964,
+      "total_heating_kwh": 0.0,
+      "total_cooling_kwh": 10.016666666666744,
+      "peak_power_kw": 1.0,
+      "oscillation_count": 0,
+      "recovery_time_min": 131.99999999999994
+    }
+  },
+  "ultimate_stress": {
+    "rule": {
+      "comfort_violations_pct": 99.86111111111111,
+      "max_deviation": 91.37515149959167,
+      "avg_deviation": 33.2026964628017,
+      "rms_error": 39.342351579497496,
+      "total_heating_kwh": 80.00000000000061,
+      "total_cooling_kwh": 109.875,
+      "peak_power_kw": 9.994791666666666,
+      "oscillation_count": 1199,
+      "recovery_time_min": 604.9999999999999
+    },
+    "pid": {
+      "comfort_violations_pct": 99.86111111111111,
+      "max_deviation": 91.87361155337713,
+      "avg_deviation": 33.20898757964381,
+      "rms_error": 39.351322261148326,
+      "total_heating_kwh": 80.00000000000061,
+      "total_cooling_kwh": 109.875,
+      "peak_power_kw": 9.994791666666666,
+      "oscillation_count": 1199,
+      "recovery_time_min": 612.9999999999999
+    },
+    "mpc": {
+      "comfort_violations_pct": 97.91666666666667,
+      "max_deviation": 10.459784283322676,
+      "avg_deviation": 5.703774698593702,
+      "rms_error": 6.127964999902245,
+      "total_heating_kwh": 0.0,
+      "total_cooling_kwh": 56.733333333332574,
+      "peak_power_kw": 7.0,
+      "oscillation_count": 0,
+      "recovery_time_min": 6.000000000000032
+    }
+  }
+}
